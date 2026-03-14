@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LEAD Connect</title>
+    <!-- GitHub Pages SPA redirect: preserves URL so React Router can handle it -->
+    <script>
+      // Single Page Application redirect for GitHub Pages
+      // Takes the current URL and converts path/query to a hash-based redirect
+      // that index.html can decode back to the original URL.
+      var segmentCount = 1; // number of path segments in the basepath (1 for /leadconnect/)
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
+        l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <p>You need to enable JavaScript to run this app.</p>
+    </noscript>
+  </body>
+</html>
