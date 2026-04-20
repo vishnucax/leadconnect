@@ -36,6 +36,7 @@ export default function ChatPage() {
   const [queueCount, setQueueCount] = useState(0);
   const [socketStatus, setSocketStatus] = useState('connecting'); // 'connecting' | 'connected' | 'error'
   const [isMediaReady, setIsMediaReady] = useState(false);
+  const [requiresManualPlay, setRequiresManualPlay] = useState(false);
 
   // Use refs for values that shouldn't trigger re-renders but must always be current
   const localStreamRef = useRef(null);
@@ -98,15 +99,20 @@ export default function ChatPage() {
     setPartner(null);
     setIsMatching(false);
     setConnectionStatus('disconnected');
+    setRequiresManualPlay(false);
   }, [cleanupPeer]);
 
   // ─── WebRTC Signaling ────────────────────────────────────────────────────────
-  const initiateWebRTC = useCallback(async (isInitiator) => {
+  const initiateWebRTC = useCallback(async (isInitiator, forceRelay = false) => {
     const sock = socketRef.current;
     if (!sock) return;
 
-    cleanupPeer();
+    if (peerConnectionRef.current) {
+      cleanupPeer();
+    }
+    
     setConnectionStatus('connecting');
+    setRequiresManualPlay(false);
 
     let iceConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     try {
@@ -116,9 +122,15 @@ export default function ChatPage() {
       });
       if (res.ok) {
         iceConfig = await res.json();
+        console.log('WebRTC: Fetched TURN credentials successfully.');
       }
     } catch (err) {
-      console.warn('Failed to fetch turn credentials. Using fallback STUN.');
+      console.warn('WebRTC: Failed to fetch turn credentials. Using fallback STUN.', err);
+    }
+
+    if (forceRelay) {
+      console.warn('WebRTC: Forcing ICE Transport Policy to Relay.');
+      iceConfig.iceTransportPolicy = 'relay';
     }
 
     const pc = new RTCPeerConnection(iceConfig);
@@ -132,11 +144,13 @@ export default function ChatPage() {
         console.log('WebRTC: Remote description set (Offer)');
         
         // Flush pending ICE candidates
-        console.log(`WebRTC: Flushing ${pendingCandidatesRef.current.length} pending candidates`);
-        for (const c of pendingCandidatesRef.current) {
-          await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+        if (pendingCandidatesRef.current.length > 0) {
+            console.log(`WebRTC: Flushing ${pendingCandidatesRef.current.length} pending candidates`);
+            for (const c of pendingCandidatesRef.current) {
+               await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+            }
+            pendingCandidatesRef.current = [];
         }
-        pendingCandidatesRef.current = [];
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -158,10 +172,13 @@ export default function ChatPage() {
         console.log('WebRTC: Remote description set (Answer)');
         
         // Flush pending ICE candidates
-        for (const c of pendingCandidatesRef.current) {
-          await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+        if (pendingCandidatesRef.current.length > 0) {
+            console.log(`WebRTC: Flushing ${pendingCandidatesRef.current.length} pending candidates`);
+            for (const c of pendingCandidatesRef.current) {
+                await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+            }
+            pendingCandidatesRef.current = [];
         }
-        pendingCandidatesRef.current = [];
       } catch (err) {
         console.error('WebRTC: Error handling answer:', err);
       }
@@ -170,10 +187,8 @@ export default function ChatPage() {
     const handleIceCandidate = async (candidate) => {
       try {
         if (pc.remoteDescription && pc.remoteDescription.type) {
-          console.log('WebRTC: Adding ICE candidate immediately');
           await pc.addIceCandidate(candidate);
         } else {
-          console.log('WebRTC: Buffering ICE candidate');
           pendingCandidatesRef.current.push(candidate);
         }
       } catch (err) {
@@ -188,89 +203,89 @@ export default function ChatPage() {
 
     // Remote stream arrives
     pc.ontrack = (event) => {
-      console.log('WebRTC: Incoming track event!', event.streams);
-      const [remoteStream] = event.streams;
-      if (remoteStream) {
-        console.log('WebRTC: Attaching remote stream to video element');
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play().catch(e => {
-            console.warn('WebRTC: Remote video play failed (retrying):', e.message);
-            // Fallback: try playing again on user interaction or after a small delay
-            setTimeout(() => remoteVideoRef.current?.play().catch(() => {}), 1000);
-          });
+      console.log(`WebRTC: Incoming track event! Tracks count: ${event.streams.length}`);
+      const remoteStream = event.streams[0];
+      if (remoteStream && remoteVideoRef.current) {
+        console.log('WebRTC: Attaching requested remote stream to video element');
+        remoteVideoRef.current.srcObject = remoteStream;
+        
+        // Ensure explicit properties for Autoplay restrictions
+        const playPromise = remoteVideoRef.current.play();
+        if (playPromise !== undefined) {
+             playPromise.then(() => {
+                 console.log("WebRTC: Remote video is playing successfully!");
+                 setRequiresManualPlay(false);
+             }).catch(e => {
+                 console.warn('WebRTC: Remote video autoplay failed (User interaction required):', e.message);
+                 if (e.name === 'NotAllowedError') {
+                    setRequiresManualPlay(true);
+                 }
+             });
         }
-      } else if (remoteVideoRef.current) {
-        console.warn('WebRTC: No streams found in ontrack, creating one...');
-        // Fallback for browsers that don't provide streams in ontrack
-        if (!remoteVideoRef.current.srcObject) {
-          remoteVideoRef.current.srcObject = new MediaStream();
-        }
-        remoteVideoRef.current.srcObject.addTrack(event.track);
-        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
     // ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate && socketRef.current) {
-        console.log('WebRTC: Local ICE candidate generated');
         socketRef.current.emit('ice-candidate', event.candidate);
       }
     };
 
     // Connection state monitoring
     pc.oniceconnectionstatechange = () => {
-      console.log('WebRTC: ICE connection state changed to:', pc.iceConnectionState);
+      console.log('WebRTC: ICE connection state:', pc.iceConnectionState);
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         setConnectionStatus('connected');
-      } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+        console.log("WebRTC: VIDEO SHOULD BE VISIBLE OR CONNECTING NOW");
+        // Fallback checks just in case the stream arrived but didn't fire play
+        if (remoteVideoRef.current && remoteVideoRef.current.paused && remoteVideoRef.current.srcObject) {
+             remoteVideoRef.current.play().catch(() => setRequiresManualPlay(true));
+        }
+      } else if (pc.iceConnectionState === 'failed') {
+        console.error('WebRTC: ICE Failed. Attempting restart traversing only via TURN relays.');
+        if (!forceRelay) {
+             initiateWebRTC(isInitiator, true); // Restart forced through relays
+        } else {
+             setConnectionStatus('disconnected');
+             setMessages(prev => [...prev, { text: 'Connection failed due to extreme network restrictions.', isSystem: true }]);
+             handleCleanup(false);
+        }
+      } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed') {
         setConnectionStatus('disconnected');
       }
     };
 
     pc.onconnectionstatechange = () => {
-      console.log('WebRTC: Peer connection state changed to:', pc.connectionState);
+      console.log('WebRTC: Peer connection state:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
+           console.log("WebRTC: PEER IS CONNECTED");
+      }
     };
 
-    pc.onsignalingstatechange = () => {
-      console.log('WebRTC: Signaling state changed to:', pc.signalingState);
-    };
+    // Prepare streams BEFORE creating descriptions
+    const stream = localStreamRef.current;
+    if (stream) {
+      console.log('WebRTC: Adding local tracks to peer connection');
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    } else {
+      console.warn('WebRTC: No local stream available during initialization.');
+    }
 
     // Initiator creates and sends the offer
     if (isInitiator) {
       try {
         console.log('WebRTC: Initiator creating offer...');
-        // Add local tracks BEFORE creating offer
-        const stream = localStreamRef.current;
-        if (stream) {
-          console.log('WebRTC: Adding local tracks to peer connection');
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
-        } else {
-          console.warn('WebRTC: No local stream available to add tracks');
-        }
-
-        const offer = await pc.createOffer({ 
-          offerToReceiveAudio: true, 
-          offerToReceiveVideo: true 
-        });
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
         await pc.setLocalDescription(offer);
         console.log('WebRTC: Local description set (Offer)');
         
-        // Small delay to ensure receiver's signaling handlers are ready
         setTimeout(() => {
           console.log('WebRTC: Sending offer to partner');
           sock.emit('offer', offer);
         }, 100);
       } catch (err) {
         console.error('WebRTC: Error creating offer:', err);
-      }
-    } else {
-      // Receiver: Also add local tracks so initiator can see receiver
-      const stream = localStreamRef.current;
-      if (stream) {
-        console.log('WebRTC: Receiver adding local tracks to peer connection');
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
       }
     }
   }, [cleanupPeer]);
@@ -501,6 +516,20 @@ export default function ChatPage() {
                 className="w-full h-full object-cover"
                 style={{ display: partner ? 'block' : 'none' }}
               />
+              {requiresManualPlay && (
+                <div className="absolute inset-0 bg-black/80 z-40 flex items-center justify-center flex-col gap-4">
+                     <p className="text-white font-medium">Browser blocked auto-playing audio</p>
+                     <button 
+                         className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+                         onClick={() => {
+                             if(remoteVideoRef.current) remoteVideoRef.current.play().catch(()=>console.error("Still blocked."));
+                             setRequiresManualPlay(false);
+                         }}
+                     >
+                        Tap to Enable A/V
+                     </button>
+                </div>
+              )}
               {!partner && (
                 <div className="text-center absolute inset-0 flex items-center justify-center">
                   {isMatching ? (
@@ -523,7 +552,7 @@ export default function ChatPage() {
                 </div>
               )}
               {partner && (
-                <div className="absolute bottom-6 left-6 px-4 py-2 glass rounded-2xl text-sm font-medium">
+                <div className="absolute bottom-6 left-6 px-4 py-2 glass rounded-2xl text-sm font-medium z-10">
                   Stranger (Student)
                 </div>
               )}
