@@ -491,7 +491,6 @@ export default function ChatPage() {
           >
             <LogOut className="w-5 h-5" />
           </button>
-        </div>
       </header>
 
       {/* Media Error Banner */}
