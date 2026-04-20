@@ -2,9 +2,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
+app.use(helmet());
 const server = http.createServer(app);
 
 // Global stats tracker
@@ -65,9 +67,11 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const turnRoutes = require('./routes/turnRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/turn', turnRoutes);
 
 // Socket.io
 const initSocket = require('./socket/index');

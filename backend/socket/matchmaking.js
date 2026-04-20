@@ -1,7 +1,7 @@
 const queue = [];
 
-const handleMatchmaking = (io, socket) => {
-    socket.on('joinQueue', (userData) => {
+const handleMatchmaking = (io, socket, applyRateLimit) => {
+    applyRateLimit('joinQueue', (userData) => {
         socket.userData = userData; 
         
         // Clean up self or stale entries from the queue before moving forward
@@ -36,7 +36,7 @@ const handleMatchmaking = (io, socket) => {
         io.emit('queueCount', queue.length);
     });
 
-    socket.on('leaveQueue', () => {
+    applyRateLimit('leaveQueue', () => {
         const index = queue.findIndex(item => item.socketId === socket.id);
         if (index !== -1) {
             queue.splice(index, 1);

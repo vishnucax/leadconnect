@@ -20,14 +20,7 @@ import { useRouter } from 'next/navigation';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-  ]
-};
+// Removed hardcoded ICE_SERVERS to fetch securely from backend
 
 export default function ChatPage() {
   const [socket, setSocket] = useState(null);
@@ -113,10 +106,23 @@ export default function ChatPage() {
     if (!sock) return;
 
     cleanupPeer();
-
-    const pc = new RTCPeerConnection(ICE_SERVERS);
-    peerConnectionRef.current = pc;
     setConnectionStatus('connecting');
+
+    let iceConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${SOCKET_URL}/api/turn`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        iceConfig = await res.json();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch turn credentials. Using fallback STUN.');
+    }
+
+    const pc = new RTCPeerConnection(iceConfig);
+    peerConnectionRef.current = pc;
 
     // ── Signaling handlers ──
     const handleOffer = async (offer) => {

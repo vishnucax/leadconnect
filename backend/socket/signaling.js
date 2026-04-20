@@ -1,33 +1,38 @@
-const handleSignaling = (io, socket) => {
-    socket.on('offer', (data) => {
+const xss = require('xss');
+
+const handleSignaling = (io, socket, applyRateLimit) => {
+    applyRateLimit('offer', (data) => {
         if (socket.partnerId) {
             io.to(socket.partnerId).emit('offer', data);
         }
     });
 
-    socket.on('answer', (data) => {
+    applyRateLimit('answer', (data) => {
         if (socket.partnerId) {
             io.to(socket.partnerId).emit('answer', data);
         }
     });
 
-    socket.on('ice-candidate', (data) => {
+    applyRateLimit('ice-candidate', (data) => {
         if (socket.partnerId) {
             io.to(socket.partnerId).emit('ice-candidate', data);
         }
     });
 
-    socket.on('sendMessage', (message) => {
-        if (socket.partnerId) {
-            io.to(socket.partnerId).emit('receiveMessage', {
-                text: message,
-                sender: 'partner',
-                timestamp: new Date()
-            });
+    applyRateLimit('sendMessage', (message) => {
+        if (socket.partnerId && typeof message === 'string') {
+            const safeMessage = xss(message.trim());
+            if (safeMessage.length > 0) {
+                io.to(socket.partnerId).emit('receiveMessage', {
+                    text: safeMessage,
+                    sender: 'partner',
+                    timestamp: new Date()
+                });
+            }
         }
     });
 
-    socket.on('skip', () => {
+    applyRateLimit('skip', () => {
         if (socket.partnerId) {
             const partnerSocket = io.sockets.sockets.get(socket.partnerId);
             if (partnerSocket) {
@@ -36,10 +41,9 @@ const handleSignaling = (io, socket) => {
             }
             socket.partnerId = null;
         }
-        // User will emit joinQueue again from frontend
     });
 
-    socket.on('endSession', () => {
+    applyRateLimit('endSession', () => {
         if (socket.partnerId) {
             const partnerSocket = io.sockets.sockets.get(socket.partnerId);
             if (partnerSocket) {
