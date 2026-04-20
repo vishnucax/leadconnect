@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_verified BOOLEAN DEFAULT FALSE,
     role VARCHAR(20) DEFAULT 'student' CHECK (role IN ('student', 'admin')),
     is_blocked BOOLEAN DEFAULT FALSE,
+    is_guest BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

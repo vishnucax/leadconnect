@@ -4,8 +4,11 @@ const handleMatchmaking = (io, socket) => {
     socket.on('joinQueue', (userData) => {
         socket.userData = userData; 
         
-        if (queue.length > 0) {
-            const partner = queue.shift();
+        // Clean up self or stale entries from the queue before moving forward
+        const validQueueIndex = queue.findIndex(q => q.socketId !== socket.id && io.sockets.sockets.get(q.socketId));
+
+        if (validQueueIndex !== -1) {
+            const partner = queue.splice(validQueueIndex, 1)[0];
             const partnerSocket = io.sockets.sockets.get(partner.socketId);
 
             if (partnerSocket) {
@@ -19,9 +22,14 @@ const handleMatchmaking = (io, socket) => {
                 
                 console.log(`Matched ${socket.id} with ${partner.socketId}`);
             } else {
+                // Partner disappeared during the split second it took to retrieve them
                 queue.push({ socketId: socket.id, userData });
             }
         } else {
+            // Remove any old iterations of myself from the queue
+            const myOldIndex = queue.findIndex(q => q.socketId === socket.id);
+            if (myOldIndex !== -1) queue.splice(myOldIndex, 1);
+            
             queue.push({ socketId: socket.id, userData });
             console.log(`User ${socket.id} joined queue`);
         }
