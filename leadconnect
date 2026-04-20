@@ -1,0 +1,81 @@
+# 🛡️ CampusConnect Security Overhaul
+
+The application has been fully fortified for production deployment. We addressed all requested vulnerabilities ensuring that API keys are not leaked, inputs are sanitized, and WebRTC streaming is both reliable and credential-protected.
+
+## 1. Secure Architecture Diagram
+
+```mermaid
+graph TD;
+    subgraph Frontend [GitHub Pages - Static & Public]
+        A[Next.js Client]
+    end
+
+    subgraph Backend [Server Environment - Protected]
+        C[Node.js / Express]
+        D[Socket.IO Server]
+        E(TURN Auth Generator)
+    end
+    
+    subgraph Database Layer [Supabase]
+        F[(PostgreSQL DB)]
+    end
+
+    subgraph Relays [WebRTC]
+        G((TURN/STUN Server))
+    end
+
+    A -- "1. Auth via Headers (JWT)" --> C
+    A -- "2. Get Dynamic TURN Creds" --> E
+    A -- "3. Authenticated Socket" --> D
+    
+    C -- "4. Validates via pg pool" --> F
+    D -- "5. Rate Limiting + Single Session" --> D
+    D -- "6. Matchmaking & XSS Cleaned Signaling" --> A
+
+    A -- "7. P2P Video via Temporary Credentials" --> G
+```
+
+## 2. Security Enhancements Implemented
+> [!NOTE]
+> All changes are committed to your codebase via `server.js`, `page.js`, and the socket handlers.
+
+### Backend Hardening
+*   **Helmet.js Integration:** Automatically configures industry-standard HTTP security headers.
+*   **Strict CORS:** Now rigorously structured to accept only matching origins `FRONTEND_URL` without loose wildcards.
+*   **TURN API Endpoint (`/api/turn`):** We developed an endpoint leveraging Node's built-in `crypto` library. It hashes time-limited (`TTL` parameter based) ICE credentials so users don't have infinite access to your TURN relays. Only requests holding a valid JWT receive an ICE array.
+
+### Socket Protection
+*   **Session Throttling & Limiter:** Socket connections pass through a localized rate limiter map that forces a temporary block (`applyRateLimit`) if a client exceeds normal event thresholds.
+*   **Single Device Locks:** Using an active tracking map, a user is prohibited from opening overlapping tabs and spamming the matchmaking queue under the same token.
+*   **XSS Stripping:** We integrated `xss` library to purge malicious JS tags (`<script>`) from any plain text transmitted inside WebRTC signaling via `handleSignaling`. 
+
+### Frontend Cleanup
+*   **Zero-Credentials Client:** Removed all hardcoded ICE/STUN configurations situated freely inside `page.js`.
+*   **Dynamic Binding:** The module fetches dynamic secrets safely per-load, blocking scraping utilities.
+
+### Supabase Defenses
+* Created the necessary `supabase_rls_policies.sql` artifact. These represent Row-Level Security definitions that guarantee row-level data segregation if a client interface directly hooks to the tables.
+
+---
+
+## 3. Pre-Flight Checklist Before Launching
+> [!IMPORTANT]
+> To fully implement the WebRTC backend protection, update your `.env` variables right now.
+
+- [ ] Run `npm install` gracefully inside `backend` folder locally before commit.
+- [ ] In production backend `.env`, define your internal `TURN_SECRET` key string (e.g. `TURN_SECRET=super_secret_string`).
+- [ ] In production backend `.env`, list the URLs for your network provider (e.g., Twilio / Metered): `TURN_URLS=turn:global.turn.twilio.com:3478?transport=udp`.
+- [ ] Connect to your Supabase SQL editor and execute the generated `supabase_rls_policies.sql` queries directly inside the console.
+
+## 4. Final Deployment Architecture Check
+
+**Frontend:**
+* Deployment Route: Static build exported directly to GitHub Pages / Vercel. 
+* Expected Action: Keep it totally stateless. The `localStorage` stores the JWT but no operational logic happens here without API confirmations.
+
+**Backend:**
+* Deployment Route: Render or Railway node worker. Needs WebSockets enabled.
+* Expose Environment Variables completely. No code configuration changes left.
+
+**Supabase:**
+* No custom APIs necessary here, but strictly ensure the Service Role key isn't mixed into the Next.js `env.local` files moving forward.
