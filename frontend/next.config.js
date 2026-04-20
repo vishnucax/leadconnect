@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'export',
-  basePath: '/lead-connect', // Assuming the repository name is lead-connect
+  basePath: '/leadconnect', // Updated to match the repository name
   images: {
     unoptimized: true, // Required for static export
   },
