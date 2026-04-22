@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, MessageSquare, Heart, Github, Globe, Instagram, CheckCircle2, Navigation, Loader2 } from 'lucide-react';
+import { Video, MessageSquare, Heart, Github, Globe, Instagram, CheckCircle2, Navigation, Loader2, Mail, Linkedin, Copy, Check } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [upiCopied, setUpiCopied] = useState(false);
 
   // Loading Screen effect
   useEffect(() => {
@@ -17,6 +18,12 @@ export default function LandingPage() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  const copyUpi = () => {
+    navigator.clipboard.writeText('vishnukookkal@okaxis'); // placeholder
+    setUpiCopied(true);
+    setTimeout(() => setUpiCopied(false), 2000);
+  };
 
   if (isLoading) {
     return (
@@ -110,12 +117,49 @@ export default function LandingPage() {
           </button>
         </motion.div>
 
+        {/* ABOUT LEAD COLLEGE PALAKKAD SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full mt-8 mb-24"
+        >
+          <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center gap-10">
+              <div className="w-full md:w-1/2 flex-shrink-0">
+                <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-xl transform transition-transform hover:scale-[1.02] duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src="/Assets/Images/leadcollege.png" 
+                    alt="LEAD College Palakkad" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                  <div className="absolute bottom-4 left-4 z-20">
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/30 uppercase tracking-wider">Palakkad, Kerala</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full md:w-1/2 text-center md:text-left">
+                <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-5 tracking-tight">About LEAD College Palakkad</h2>
+                <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-6">
+                  LEAD College Palakkad stands at the forefront of innovation-driven learning, fostering a vibrant student community dedicated to excellence. Our modern education environment is designed to cultivate leadership, inspire creativity, and promote a highly collaborative culture. 
+                </p>
+                <p className="text-[#475569] text-[15px] md:text-base leading-relaxed font-medium">
+                  We believe in holistic student growth—equipping the next generation of thinkers and builders to shape the future with passion and purpose.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
         {/* WHAT IS LEAD CONNECT SECTION */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="w-full mt-16 mb-24"
+          className="w-full mb-24"
         >
           <h2 className="text-3xl font-bold text-center text-[#0f172a] mb-12">What is LEAD Connect?</h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -178,36 +222,71 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="w-full mb-24 max-w-3xl mx-auto"
+          className="w-full mb-24 max-w-4xl mx-auto"
         >
-          <div className="glass p-8 rounded-3xl border-2 border-blue-50/50 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none" />
+          <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-100 flex flex-col md:flex-row items-center gap-10 relative overflow-hidden shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+            <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-blue-100 rounded-full blur-[100px] -z-10 opacity-60 pointer-events-none" />
             
-            <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 border-4 border-white shadow-lg flex-shrink-0">
+            <div className="relative w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden flex-shrink-0 shadow-[0_0_0_6px_rgba(255,255,255,0.8),0_0_30px_rgba(59,130,246,0.3)] transform transition-transform hover:scale-105 duration-300">
                {/* eslint-disable-next-line @next/next/no-img-element */}
                <img 
-                 src="/Assets/Images/leadcollege.png" 
+                 src="/Assets/Images/vishnu-developer.jpeg" 
                  alt="Vishnu K" 
                  className="w-full h-full object-cover"
                  onError={(e) => { e.target.style.display = 'none'; }}
                />
             </div>
             
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-[#0f172a] mb-1">Vishnu K</h2>
-              <p className="text-[#3b82f6] font-semibold text-sm mb-4">Creator & Lead Developer</p>
-              <p className="text-[#475569] text-sm leading-relaxed mb-6">
-                MCA student, backend & realtime systems enthusiast, passionate builder, and DevOps/cloud explorer. Built LEAD Connect to bridge the gap between departments and foster a connected campus culture.
+            <div className="flex-1 text-center md:text-left z-10">
+              <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider mb-3">Lead Developer</div>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-2 tracking-tight">Vishnu K</h2>
+              <p className="text-[#3b82f6] font-semibold text-[15px] md:text-base mb-5">MCA Student & Realtime Systems Enthusiast</p>
+              <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-8 max-w-2xl">
+                Passionate builder with a focus on backend architecture, DevOps, and cloud technologies. I created LEAD Connect to bridge the gap between departments and foster a genuinely connected campus culture. My vision is to build meaningful platforms that empower student interaction and growth.
               </p>
-              <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white rounded-full text-sm font-medium hover:bg-[#1e293b] transition-colors">
-                  <Github className="w-4 h-4" /> GitHub
+              
+              <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0f172a] text-white flex items-center justify-center hover:bg-[#1e293b] hover:-translate-y-1 transition-all shadow-lg">
+                  <Github className="w-5 h-5" />
                 </a>
-                <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-[#cbd5e1] text-[#0f172a] rounded-full text-sm font-medium hover:bg-[#f8fafc] transition-colors">
+                <a href="https://linkedin.com/in/vishnu-k-7-" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0a66c2] text-white flex items-center justify-center hover:bg-[#084e96] hover:-translate-y-1 transition-all shadow-lg">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#fd5949] to-[#d6249f] text-white flex items-center justify-center hover:-translate-y-1 transition-all shadow-lg">
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a href="mailto:vishnukookkal@gmail.com" className="w-12 h-12 rounded-full bg-white border border-slate-200 text-[#0f172a] flex items-center justify-center hover:bg-slate-50 hover:-translate-y-1 transition-all shadow-sm">
+                  <Mail className="w-5 h-5" />
+                </a>
+                <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-6 py-0 h-12 bg-white border border-slate-200 text-[#0f172a] rounded-full text-sm font-bold hover:bg-slate-50 hover:-translate-y-1 transition-all shadow-sm">
                   <Globe className="w-4 h-4" /> Portfolio
                 </a>
               </div>
             </div>
+          </div>
+        </motion.section>
+
+        {/* SUPPORT US CARD (ABOVE FOOTER) */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full mb-12 max-w-3xl mx-auto"
+        >
+          <div className="glass p-8 md:p-12 rounded-[2rem] text-center border border-indigo-100 shadow-[0_8px_30px_rgba(59,130,246,0.08)] bg-gradient-to-b from-white/60 to-blue-50/30">
+            <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
+              <Heart className="w-8 h-8 fill-current" />
+            </div>
+            <h2 className="text-3xl font-bold text-[#0f172a] mb-4">Support LEAD Connect</h2>
+            <p className="text-[#475569] text-base leading-relaxed max-w-xl mx-auto mb-8">
+              For deployment, server maintenance, platform improvements, and future development, your support helps keep LEAD Connect growing.
+            </p>
+            <button 
+              onClick={() => setShowSupportModal(true)}
+              className="btn-primary py-4 px-10 text-lg shadow-[0_0_30px_rgba(59,130,246,0.3)]"
+            >
+              <Heart className="w-5 h-5 fill-current" /> Support Us
+            </button>
           </div>
         </motion.section>
 
@@ -223,14 +302,14 @@ export default function LandingPage() {
             <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#3b82f6] hover:text-white transition-all">
               <Globe className="w-5 h-5" />
             </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#ec4899] hover:text-white transition-all">
+            <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-gradient-to-tr hover:from-[#fd5949] hover:to-[#d6249f] hover:text-white transition-all">
               <Instagram className="w-5 h-5" />
             </a>
           </div>
           <div className="text-center">
-            <p className="text-[#64748b] text-sm font-medium">Developed by <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="text-[#3b82f6] hover:underline">Vishnu K</a></p>
+            <p className="text-[#64748b] text-sm font-medium">Developed by <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="text-[#3b82f6] hover:underline font-bold">Vishnu K</a></p>
             <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#94a3b8]">
-              <a href="/privacy" className="hover:text-[#0f172a]">Privacy Policy</a>
+              <a href="/privacy" className="hover:text-[#0f172a] transition-colors">Privacy Policy</a>
               <span>•</span>
               <span>LEAD Connect Beta © {new Date().getFullYear()}</span>
             </div>
@@ -238,59 +317,68 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* SUPPORT MODAL */}
+      {/* SUPPORT MODAL IMPROVED */}
       <AnimatePresence>
         {showSupportModal && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
             onClick={() => setShowSupportModal(false)}
           >
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
+              className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
             >
               <button 
                 onClick={() => setShowSupportModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"
+                className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"
               >
                 ✕
               </button>
               
-              <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Heart className="w-8 h-8 fill-blue-500" />
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Heart className="w-8 h-8 fill-blue-600" />
               </div>
               
-              <h3 className="text-2xl font-bold text-[#0f172a] mb-2">Support the Developer</h3>
-              <p className="text-[#475569] text-sm leading-relaxed mb-8">
-                For smooth deployment, server maintenance, and future updates, your support means a lot.
+              <h3 className="text-2xl font-extrabold text-[#0f172a] mb-2">Support the Developer</h3>
+              <p className="text-[#475569] text-sm leading-relaxed mb-6">
+                Your support helps cover server costs and keeps the platform running smoothly.
               </p>
               
-              <div className="w-48 h-48 mx-auto bg-slate-100 border-2 border-slate-200 rounded-2xl mb-6 flex items-center justify-center overflow-hidden relative">
+              <div className="w-56 h-56 mx-auto bg-white border border-slate-200 rounded-3xl mb-6 flex items-center justify-center overflow-hidden relative shadow-[0_0_40px_rgba(59,130,246,0.3)]">
                 {/* Fallback QR area if image fails */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center">
                   <p>QR Code</p>
-                  <p>(Place developerqr.jpeg in public/Assets/Images/)</p>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src="/Assets/Images/developerqr.jpeg" 
                   alt="Support QR Code" 
-                  className="w-full h-full object-cover relative z-10"
+                  className="w-full h-full object-cover relative z-10 p-2"
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
 
+              {/* Copy UPI Option */}
+              <button 
+                onClick={copyUpi}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 mb-4 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                {upiCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                {upiCopied ? 'UPI ID Copied!' : 'Copy UPI ID'}
+              </button>
+
               <button 
                 onClick={() => setShowSupportModal(false)}
-                className="w-full py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                className="w-full py-3 bg-[#0f172a] text-white font-bold rounded-xl hover:bg-[#1e293b] transition-colors"
               >
-                Close
+                Done
               </button>
             </motion.div>
           </motion.div>
