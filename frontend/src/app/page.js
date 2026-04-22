@@ -295,40 +295,45 @@ export default function LandingPage() {
           </div>
         </motion.section>
 
-        {/* 5. ABOUT LEAD COLLEGE PALAKKAD SECTION */}
+        {/* 5. EXCLUSIVELY BUILT FOR LEAD COLLEGE SECTION */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="w-full max-w-5xl mx-auto mb-24"
         >
-          <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] overflow-hidden">
-            <div className="flex flex-col md:flex-row items-center gap-10">
-              <div className="w-full md:w-1/2 flex-shrink-0">
-                <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-xl transform transition-transform hover:scale-[1.02] duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src="/Assets/Images/leadcollege.png" 
-                    alt="LEAD College Palakkad" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                  <div className="absolute bottom-4 left-4 z-20">
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/30 uppercase tracking-wider shadow-sm">Palakkad, Kerala</span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full md:w-1/2 text-center md:text-left">
-                <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-5 tracking-tight">About LEAD College (Autonomous), Palakkad</h2>
-                <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-6">
-                  As an autonomous institution, LEAD College is dedicated to providing innovation-driven education that bridges the gap between academia and industry. Our modern campus environment is built to foster an entrepreneurial culture and nurture the leaders of tomorrow.
-                </p>
-                <p className="text-[#475569] text-[15px] md:text-base leading-relaxed font-medium">
-                  With a strong emphasis on leadership development and continuous student growth, we empower our students to turn their boldest ideas into reality and succeed in a rapidly evolving global landscape.
-                </p>
-              </div>
-            </div>
+          <div className="glass p-10 md:p-14 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center relative overflow-hidden">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[#0f172a] mb-4 tracking-tight">Exclusively Built for LEAD College (Autonomous), Palakkad Students</h2>
+            <p className="text-[#475569] text-base md:text-lg leading-relaxed max-w-3xl mx-auto font-medium">
+              Currently open for public beta testing. Future versions will be restricted to verified LEAD College students only.
+            </p>
+          </div>
+
+          {/* AUTO-SCROLLING NEWS / ANNOUNCEMENT BAR */}
+          <div className="mt-8 overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm relative group flex items-center h-14">
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#f8fafc] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#f8fafc] to-transparent z-10 pointer-events-none" />
+            
+            <motion.div 
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ ease: "linear", duration: 25, repeat: Infinity }}
+              className="flex items-center whitespace-nowrap text-sm md:text-base font-semibold text-[#0f172a] group-hover:[animation-play-state:paused]"
+              style={{ width: "fit-content" }}
+            >
+              {/* First Set */}
+              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
+              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
+              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
+              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
+              <span className="mx-6 text-blue-600">•</span> More features coming soon 
+              
+              {/* Duplicated Set for Seamless Infinite Scroll */}
+              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
+              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
+              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
+              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
+              <span className="mx-6 text-blue-600">•</span> More features coming soon
+            </motion.div>
           </div>
         </motion.section>
 
