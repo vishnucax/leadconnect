@@ -20,7 +20,16 @@ import { useRouter } from 'next/navigation';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Removed hardcoded ICE_SERVERS to fetch securely from backend
+// Generate or reuse a persistent guest ID
+function getGuestId() {
+  if (typeof window === 'undefined') return null;
+  let id = localStorage.getItem('guestId');
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    localStorage.setItem('guestId', id);
+  }
+  return id;
+}
 
 export default function ChatPage() {
   const [socket, setSocket] = useState(null);
@@ -30,15 +39,14 @@ export default function ChatPage() {
   const [inputText, setInputText] = useState('');
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'disconnected' | 'connecting' | 'connected'
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [mediaError, setMediaError] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
-  const [socketStatus, setSocketStatus] = useState('connecting'); // 'connecting' | 'connected' | 'error'
+  const [socketStatus, setSocketStatus] = useState('connecting');
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [requiresManualPlay, setRequiresManualPlay] = useState(false);
 
-  // Use refs for values that shouldn't trigger re-renders but must always be current
   const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const socketRef = useRef(null);
@@ -46,11 +54,11 @@ export default function ChatPage() {
   const remoteVideoRef = useRef(null);
   const chatEndRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
-  const partnerRef = useRef(null); // track partner in ref too to avoid stale closures
+  const partnerRef = useRef(null);
 
   const router = useRouter();
 
-  // ─── Media Initialization ───────────────────────────────────────────────────
+  // ─── Media Initialization ──────────────────────────────────────────────────
   const initMedia = useCallback(async () => {
     try {
       setMediaError(null);
@@ -74,7 +82,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  // ─── Cleanup Peer Connection ─────────────────────────────────────────────────
+  // ─── Cleanup Peer Connection ───────────────────────────────────────────────
   const cleanupPeer = useCallback(() => {
     if (peerConnectionRef.current) {
       peerConnectionRef.current.ontrack = null;
@@ -89,7 +97,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  // ─── Handle Cleanup After Session Ends ──────────────────────────────────────
+  // ─── Handle Cleanup After Session Ends ────────────────────────────────────
   const handleCleanup = useCallback((showMessage = true) => {
     cleanupPeer();
     if (showMessage && partnerRef.current) {
@@ -102,7 +110,7 @@ export default function ChatPage() {
     setRequiresManualPlay(false);
   }, [cleanupPeer]);
 
-  // ─── WebRTC Signaling ────────────────────────────────────────────────────────
+  // ─── WebRTC Signaling ──────────────────────────────────────────────────────
   const initiateWebRTC = useCallback(async (isInitiator, forceRelay = false) => {
     const sock = socketRef.current;
     if (!sock) return;
@@ -114,18 +122,16 @@ export default function ChatPage() {
     setConnectionStatus('connecting');
     setRequiresManualPlay(false);
 
+    // Try to fetch TURN credentials (no auth required now)
     let iceConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${SOCKET_URL}/api/turn`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await fetch(`${SOCKET_URL}/api/turn`);
       if (res.ok) {
         iceConfig = await res.json();
         console.log('WebRTC: Fetched TURN credentials successfully.');
       }
     } catch (err) {
-      console.warn('WebRTC: Failed to fetch turn credentials. Using fallback STUN.', err);
+      console.warn('WebRTC: Failed to fetch TURN credentials. Using fallback STUN.', err);
     }
 
     if (forceRelay) {
@@ -136,25 +142,18 @@ export default function ChatPage() {
     const pc = new RTCPeerConnection(iceConfig);
     peerConnectionRef.current = pc;
 
-    // ── Signaling handlers ──
     const handleOffer = async (offer) => {
       console.log('WebRTC: Offer received', offer.type);
       try {
         await pc.setRemoteDescription(offer);
-        console.log('WebRTC: Remote description set (Offer)');
-        
-        // Flush pending ICE candidates
         if (pendingCandidatesRef.current.length > 0) {
-            console.log(`WebRTC: Flushing ${pendingCandidatesRef.current.length} pending candidates`);
-            for (const c of pendingCandidatesRef.current) {
-               await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
-            }
-            pendingCandidatesRef.current = [];
+          for (const c of pendingCandidatesRef.current) {
+            await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+          }
+          pendingCandidatesRef.current = [];
         }
-
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        console.log('WebRTC: Answer created and local description set');
         sock.emit('answer', answer);
       } catch (err) {
         console.error('WebRTC: Error handling offer:', err);
@@ -164,20 +163,13 @@ export default function ChatPage() {
     const handleAnswer = async (answer) => {
       console.log('WebRTC: Answer received', answer.type);
       try {
-        if (pc.signalingState !== 'have-local-offer') {
-          console.warn('WebRTC: Received answer but signaling state is:', pc.signalingState);
-          return;
-        }
+        if (pc.signalingState !== 'have-local-offer') return;
         await pc.setRemoteDescription(answer);
-        console.log('WebRTC: Remote description set (Answer)');
-        
-        // Flush pending ICE candidates
         if (pendingCandidatesRef.current.length > 0) {
-            console.log(`WebRTC: Flushing ${pendingCandidatesRef.current.length} pending candidates`);
-            for (const c of pendingCandidatesRef.current) {
-                await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
-            }
-            pendingCandidatesRef.current = [];
+          for (const c of pendingCandidatesRef.current) {
+            await pc.addIceCandidate(c).catch(e => console.error('WebRTC: Error adding pending candidate', e));
+          }
+          pendingCandidatesRef.current = [];
         }
       } catch (err) {
         console.error('WebRTC: Error handling answer:', err);
@@ -196,110 +188,73 @@ export default function ChatPage() {
       }
     };
 
-    // Remove stale listeners and add new ones
     sock.off('offer').on('offer', handleOffer);
     sock.off('answer').on('answer', handleAnswer);
     sock.off('ice-candidate').on('ice-candidate', handleIceCandidate);
 
-    // Remote stream arrives
     pc.ontrack = (event) => {
-      console.log(`WebRTC: Incoming track event! Tracks count: ${event.streams.length}`);
       const remoteStream = event.streams[0];
       if (remoteStream && remoteVideoRef.current) {
-        console.log('WebRTC: Attaching requested remote stream to video element');
         remoteVideoRef.current.srcObject = remoteStream;
-        
-        // Ensure explicit properties for Autoplay restrictions
         const playPromise = remoteVideoRef.current.play();
         if (playPromise !== undefined) {
-             playPromise.then(() => {
-                 console.log("WebRTC: Remote video is playing successfully!");
-                 setRequiresManualPlay(false);
-             }).catch(e => {
-                 console.warn('WebRTC: Remote video autoplay failed (User interaction required):', e.message);
-                 if (e.name === 'NotAllowedError') {
-                    setRequiresManualPlay(true);
-                 }
-             });
+          playPromise
+            .then(() => setRequiresManualPlay(false))
+            .catch(e => {
+              if (e.name === 'NotAllowedError') setRequiresManualPlay(true);
+            });
         }
       }
     };
 
-    // ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate && socketRef.current) {
         socketRef.current.emit('ice-candidate', event.candidate);
       }
     };
 
-    // Connection state monitoring
     pc.oniceconnectionstatechange = () => {
-      console.log('WebRTC: ICE connection state:', pc.iceConnectionState);
+      console.log('WebRTC: ICE state:', pc.iceConnectionState);
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         setConnectionStatus('connected');
-        console.log("WebRTC: VIDEO SHOULD BE VISIBLE OR CONNECTING NOW");
-        // Fallback checks just in case the stream arrived but didn't fire play
         if (remoteVideoRef.current && remoteVideoRef.current.paused && remoteVideoRef.current.srcObject) {
-             remoteVideoRef.current.play().catch(() => setRequiresManualPlay(true));
+          remoteVideoRef.current.play().catch(() => setRequiresManualPlay(true));
         }
       } else if (pc.iceConnectionState === 'failed') {
-        console.error('WebRTC: ICE Failed. Attempting restart traversing only via TURN relays.');
         if (!forceRelay) {
-             initiateWebRTC(isInitiator, true); // Restart forced through relays
+          initiateWebRTC(isInitiator, true);
         } else {
-             setConnectionStatus('disconnected');
-             setMessages(prev => [...prev, { text: 'Connection failed due to extreme network restrictions.', isSystem: true }]);
-             handleCleanup(false);
+          setConnectionStatus('disconnected');
+          setMessages(prev => [...prev, { text: 'Connection failed due to network restrictions.', isSystem: true }]);
+          handleCleanup(false);
         }
       } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed') {
         setConnectionStatus('disconnected');
       }
     };
 
-    pc.onconnectionstatechange = () => {
-      console.log('WebRTC: Peer connection state:', pc.connectionState);
-      if (pc.connectionState === 'connected') {
-           console.log("WebRTC: PEER IS CONNECTED");
-      }
-    };
-
-    // Prepare streams BEFORE creating descriptions
     const stream = localStreamRef.current;
     if (stream) {
-      console.log('WebRTC: Adding local tracks to peer connection');
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
-    } else {
-      console.warn('WebRTC: No local stream available during initialization.');
     }
 
-    // Initiator creates and sends the offer
     if (isInitiator) {
       try {
-        console.log('WebRTC: Initiator creating offer...');
         const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
         await pc.setLocalDescription(offer);
-        console.log('WebRTC: Local description set (Offer)');
-        
-        setTimeout(() => {
-          console.log('WebRTC: Sending offer to partner');
-          sock.emit('offer', offer);
-        }, 100);
+        setTimeout(() => sock.emit('offer', offer), 100);
       } catch (err) {
         console.error('WebRTC: Error creating offer:', err);
       }
     }
   }, [cleanupPeer]);
 
-  // ─── Socket Initialization ──────────────────────────────────────────────────
+  // ─── Socket Initialization ─────────────────────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/');
-      return;
-    }
+    const guestId = getGuestId();
 
     const newSocket = io(SOCKET_URL, {
-      auth: { token },
+      auth: { guestId },   // no JWT — just a persistent guest ID
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -319,19 +274,10 @@ export default function ChatPage() {
       setSocketStatus('error');
     });
 
-    newSocket.on('disconnect', () => {
-      setSocketStatus('connecting');
-    });
+    newSocket.on('disconnect', () => setSocketStatus('connecting'));
+    newSocket.on('onlineCount', (count) => setOnlineCount(count));
+    newSocket.on('queueCount', (count) => setQueueCount(count));
 
-    newSocket.on('onlineCount', (count) => {
-      setOnlineCount(count);
-    });
-
-    newSocket.on('queueCount', (count) => {
-      setQueueCount(count);
-    });
-
-    // Session events
     newSocket.on('matched', ({ partner: partnerData, sessionId, initiator }) => {
       console.log('Matched! initiator:', initiator);
       partnerRef.current = partnerData;
@@ -345,9 +291,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, msg]);
     });
 
-    newSocket.on('partnerDisconnected', () => {
-      handleCleanup(true);
-    });
+    newSocket.on('partnerDisconnected', () => handleCleanup(true));
 
     newSocket.on('sessionEnded', ({ reason }) => {
       const text = reason === 'partner_skipped' ? 'Partner skipped.' : 'Session ended.';
@@ -355,7 +299,6 @@ export default function ChatPage() {
       handleCleanup(false);
     });
 
-    // Start media
     initMedia();
 
     return () => {
@@ -368,15 +311,14 @@ export default function ChatPage() {
       newSocket.off('ice-candidate');
       newSocket.disconnect();
       cleanupPeer();
-      // Stop local tracks
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(t => t.stop());
         localStreamRef.current = null;
       }
     };
-  }, []); // run once on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Chat Actions ────────────────────────────────────────────────────────────
+  // ─── Chat Actions ──────────────────────────────────────────────────────────
   const startChat = useCallback(() => {
     if (!isMediaReady) return;
     const sock = socketRef.current;
@@ -384,8 +326,7 @@ export default function ChatPage() {
     handleCleanup(false);
     setIsMatching(true);
     setMessages([]);
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    sock.emit('joinQueue', userData);
+    sock.emit('joinQueue', { id: getGuestId(), role: 'guest' });
   }, [handleCleanup, isMediaReady]);
 
   const skipChat = useCallback(() => {
@@ -393,11 +334,9 @@ export default function ChatPage() {
     if (!sock) return;
     sock.emit('skip');
     handleCleanup(false);
-    // Rejoin queue after a short delay
     setTimeout(() => {
       setIsMatching(true);
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      sock.emit('joinQueue', userData);
+      sock.emit('joinQueue', { id: getGuestId(), role: 'guest' });
     }, 300);
   }, [handleCleanup]);
 
@@ -431,14 +370,13 @@ export default function ChatPage() {
     setIsMicOn(track.enabled);
   }, []);
 
-  // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0c]">
+    <div className="chat-page">
 
       {/* Header */}
       <header className="px-6 py-4 glass border-b border-white/5 flex justify-between items-center z-20 flex-shrink-0">
@@ -449,25 +387,24 @@ export default function ChatPage() {
           <h1 className="text-xl font-bold">CampusConnect</h1>
         </div>
 
-            <div className="flex items-center gap-3">
-            {socketStatus === 'error' && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-xs text-red-400">
-                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                Server Offline
-              </div>
-            )}
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-indigo-300">
-              <div className={`w-1.5 h-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
-              {onlineCount} Users Online
+        <div className="flex items-center gap-3">
+          {socketStatus === 'error' && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-xs text-red-400">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+              Server Offline
             </div>
-              {isMatching && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-400">
-                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-ping" />
-                  {queueCount} In Queue
-                </div>
-              )}
+          )}
+          <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-indigo-300">
+            <div className={`w-1.5 h-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+            {onlineCount} Online
+          </div>
+          {isMatching && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-400">
+              <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-ping" />
+              {queueCount} In Queue
             </div>
-            {partner && (
+          )}
+          {partner && (
             <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm border ${
               connectionStatus === 'connected'
                 ? 'bg-green-500/10 border-green-500/20 text-green-400'
@@ -483,28 +420,28 @@ export default function ChatPage() {
             onClick={() => {
               if (socketRef.current) socketRef.current.disconnect();
               if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-              localStorage.removeItem('token');
               router.push('/');
             }}
             className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"
-            title="Sign out"
+            title="Leave"
           >
             <LogOut className="w-5 h-5" />
           </button>
+        </div>
       </header>
 
       {/* Media Error Banner */}
       {mediaError && (
-        <div className="px-6 py-3 bg-red-500/10 border-b border-red-500/20 text-red-400 text-sm text-center">
+        <div className="px-6 py-3 bg-red-500/10 border-b border-red-500/20 text-red-400 text-sm text-center flex-shrink-0">
           ⚠️ {mediaError}
         </div>
       )}
 
       {/* Main Body */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-4 min-h-0">
+      <div className="chat-body">
         {/* Video + Controls */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0 h-full">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 relative min-h-0">
+        <div className="video-section">
+          <div className="video-grid">
 
             {/* Remote Video */}
             <div className="video-container bg-black/40 flex items-center justify-center relative">
@@ -517,16 +454,16 @@ export default function ChatPage() {
               />
               {requiresManualPlay && (
                 <div className="absolute inset-0 bg-black/80 z-40 flex items-center justify-center flex-col gap-4">
-                     <p className="text-white font-medium">Browser blocked auto-playing audio</p>
-                     <button 
-                         className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-                         onClick={() => {
-                             if(remoteVideoRef.current) remoteVideoRef.current.play().catch(()=>console.error("Still blocked."));
-                             setRequiresManualPlay(false);
-                         }}
-                     >
-                        Tap to Enable A/V
-                     </button>
+                  <p className="text-white font-medium">Browser blocked autoplay</p>
+                  <button
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    onClick={() => {
+                      if (remoteVideoRef.current) remoteVideoRef.current.play().catch(() => {});
+                      setRequiresManualPlay(false);
+                    }}
+                  >
+                    Tap to Enable A/V
+                  </button>
                 </div>
               )}
               {!partner && (
@@ -534,25 +471,25 @@ export default function ChatPage() {
                   {isMatching ? (
                     <div className="space-y-4">
                       <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto" />
-                      <p className="text-gray-400 animate-pulse">Finding someone special…</p>
+                      <p className="text-gray-400 animate-pulse">Finding someone…</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
                       <User className="w-20 h-20 text-white/5 mx-auto" />
-                      <button 
-                        onClick={startChat} 
+                      <button
+                        onClick={startChat}
                         className="btn-primary"
                         disabled={!isMediaReady}
                       >
-                        {isMediaReady ? 'Start Chat' : 'Initializing Media...'}
+                        {isMediaReady ? 'Start Chat' : 'Initializing…'}
                       </button>
                     </div>
                   )}
                 </div>
               )}
               {partner && (
-                <div className="absolute bottom-6 left-6 px-4 py-2 glass rounded-2xl text-sm font-medium z-10">
-                  Stranger (Student)
+                <div className="absolute bottom-4 left-4 px-4 py-2 glass rounded-2xl text-sm font-medium z-10">
+                  Stranger
                 </div>
               )}
             </div>
@@ -566,21 +503,19 @@ export default function ChatPage() {
                 muted
                 className="w-full h-full object-cover grayscale-[0.2]"
               />
-              <div className="absolute bottom-6 left-6 px-4 py-2 glass rounded-2xl text-sm font-medium">
+              <div className="absolute bottom-4 left-4 px-4 py-2 glass rounded-2xl text-sm font-medium">
                 You
               </div>
-              <div className="absolute bottom-6 right-6 flex gap-2">
+              <div className="absolute bottom-4 right-4 flex gap-2">
                 <button
                   onClick={toggleCamera}
                   className={`p-3 rounded-2xl glass transition-colors ${!isCameraOn ? 'text-red-500 bg-red-500/10' : 'hover:bg-white/10'}`}
-                  title={isCameraOn ? 'Turn off camera' : 'Turn on camera'}
                 >
                   {isCameraOn ? <Camera className="w-5 h-5" /> : <CameraOff className="w-5 h-5" />}
                 </button>
                 <button
                   onClick={toggleMic}
                   className={`p-3 rounded-2xl glass transition-colors ${!isMicOn ? 'text-red-500 bg-red-500/10' : 'hover:bg-white/10'}`}
-                  title={isMicOn ? 'Mute mic' : 'Unmute mic'}
                 >
                   {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
                 </button>
@@ -588,34 +523,34 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Action Footer */}
-          <div className="flex justify-center gap-2 md:gap-4 py-2 flex-shrink-0 z-30">
+          {/* Controls */}
+          <div className="controls-bar">
             <button
               onClick={skipChat}
               disabled={!partner && !isMatching}
-              className="glass px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-sm md:text-base"
+              className="glass px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <SkipForward className="w-4 h-4 md:w-5 md:h-5" /> SKIP
+              <SkipForward className="w-5 h-5" /> SKIP
             </button>
             <button
               onClick={endChat}
               disabled={!partner}
-              className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-bold hover:bg-red-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm md:text-base"
+              className="bg-red-500/10 border border-red-500/20 text-red-500 px-6 py-3 rounded-2xl font-bold hover:bg-red-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               STOP
             </button>
             <button
-              className="glass p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-400 hover:text-red-400 transition-colors"
+              className="glass p-3 rounded-2xl text-gray-400 hover:text-red-400 transition-colors"
               title="Report user"
             >
-              <Flag className="w-5 h-5 md:w-6 md:h-6" />
+              <Flag className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Chat Panel */}
-        <div className="w-full md:w-[380px] h-[50%] md:h-full flex flex-col glass-dark rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 flex-shrink-0 z-20">
-          <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+        <div className="chat-panel glass-dark">
+          <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/5 flex-shrink-0">
             <h3 className="font-bold">Live Chat</h3>
             <button className="text-gray-500 hover:text-white">
               <MoreVertical className="w-5 h-5" />

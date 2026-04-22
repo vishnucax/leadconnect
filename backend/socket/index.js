@@ -1,8 +1,8 @@
-const jwt = require('jsonwebtoken');
 const { handleMatchmaking } = require('./matchmaking');
 const { handleSignaling } = require('./signaling');
+const { randomUUID } = require('crypto');
 
-// Track active sessions by user ID to prevent multi-tab abuse
+// Track active sessions by guest ID to prevent duplicate connections
 const activeUsers = new Map();
 // Simple rate limiting per socket ID
 const rateLimiters = new Map();
@@ -29,23 +29,19 @@ const isRateLimited = (socketId, limit = 20, windowMs = 5000) => {
 };
 
 const initSocket = (io) => {
+    // No-auth middleware: assign every connecting socket a guest identity
     io.use((socket, next) => {
-        const token = socket.handshake.auth.token;
-        if (!token) return next(new Error('Authentication error'));
+        // Allow a client-provided guestId for reconnection, or generate a new one
+        const providedId = socket.handshake.auth?.guestId;
+        const guestId = providedId && typeof providedId === 'string' && providedId.length < 64
+            ? providedId
+            : randomUUID();
 
-        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-            if (err) return next(new Error('Authentication error'));
-            
-            // Check if user is already connected elsewhere
-            if (activeUsers.has(decoded.id)) {
-                // Return an error, or alternatively disconnect the old socket
-                // For safety, we block the new connection
-                return next(new Error('Session already active in another window'));
-            }
-
-            socket.user = decoded;
-            next();
-        });
+        socket.user = {
+            id: guestId,
+            role: 'guest',
+        };
+        next();
     });
 
     let onlineCount = 0;
@@ -67,9 +63,8 @@ const initSocket = (io) => {
 
         io.emit('onlineCount', onlineCount); 
         socket.emit('onlineCount', onlineCount);
-        console.log(`New connection: ${socket.id} (Online: ${onlineCount})`);
+        console.log(`New connection: ${socket.id} guest:${socket.user.id} (Online: ${onlineCount})`);
 
-        // We pass the socket directly to handlers, but they must use it safely
         handleMatchmaking(io, socket, applyRateLimit);
         handleSignaling(io, socket, applyRateLimit);
 

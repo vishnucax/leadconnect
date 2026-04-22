@@ -8,7 +8,14 @@
   --background-end-rgb: 20, 20, 25;
 }
 
+/* ── Reset: prevent all page-level overflow ── */
+html,
 body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
@@ -16,10 +23,101 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-  min-height: 100vh;
   font-family: 'Inter', sans-serif;
 }
 
+/* ── Landing page — scrollable ── */
+.landing-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Chat app — fixed full-screen, no scroll on page ── */
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100dvh;       /* dynamic viewport height – handles mobile chrome bar */
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+/* ── Chat body: video + chat panel side by side ── */
+.chat-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;          /* critical: allow children to shrink below natural size */
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .chat-body {
+    flex-direction: row;
+  }
+}
+
+/* ── Video section ── */
+.video-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+/* ── Video grid: two video tiles ── */
+.video-grid {
+  display: grid;
+  flex: 1 1 0;
+  min-height: 0;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .video-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Controls bar (skip / stop / report) ── */
+.controls-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  flex-shrink: 0;
+}
+
+/* ── Chat panel ── */
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.05);
+  /* Mobile: fixed height strip at bottom */
+  height: 260px;
+}
+
+@media (min-width: 768px) {
+  .chat-panel {
+    width: 380px;
+    height: 100%;
+  }
+}
+
+/* ── Glass effects ── */
 .glass {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
@@ -34,12 +132,15 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* ── Heading gradient ── */
 .heading-gradient {
   background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+/* ── Primary button ── */
 .btn-primary {
   @apply px-6 py-3 rounded-full font-semibold transition-all duration-300 active:scale-95;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
@@ -51,6 +152,16 @@ body {
   box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
 
+/* ── Video tile container ── */
 .video-container {
-  @apply relative rounded-3xl overflow-hidden glass aspect-video w-full h-full;
+  position: relative;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  min-height: 0;
+  width: 100%;
+  height: 100%;
 }
