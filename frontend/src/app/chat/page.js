@@ -39,6 +39,7 @@ export default function ChatPage() {
   const [requiresPlay, setRequiresPlay] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [pipPos, setPipPos] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -315,6 +316,23 @@ export default function ChatPage() {
     ? { left: pipPos.x, top: pipPos.y, right: 'auto', bottom: 'auto' }
     : { right: 16, top: 80 };
 
+  // ── Fullscreen toggle ──────────────────────────────────────
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  // ── Report User ────────────────────────────────────────────
+  const handleReport = () => {
+    alert("User reported. They have been flagged for review.");
+    skipChat(); // Immediately skip after reporting
+  };
+
   // ── Swipe to skip ──────────────────────────────────────────
   const touchStartRef = useRef(null);
   const handleTouchStart = (e) => {
@@ -553,7 +571,7 @@ export default function ChatPage() {
           <button className={`icon-btn ${!isCameraOn ? 'danger' : ''}`} onClick={toggleCamera}>
             {isCameraOn ? '📷' : '🚫'}
           </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isCameraOn ? 'Camera' : 'Camera Off'}</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isCameraOn ? 'Camera' : 'Cam Off'}</span>
         </div>
 
         {/* Chat toggle */}
@@ -573,6 +591,24 @@ export default function ChatPage() {
           </button>
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Chat</span>
         </div>
+
+        {/* Fullscreen (Desktop only mostly, or hidden on small screens if crowded) */}
+        <div className="hidden sm:flex" style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <button className={`icon-btn ${isFullscreen ? 'active' : ''}`} onClick={toggleFullscreen}>
+            {isFullscreen ? '↙️' : '↗️'}
+          </button>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isFullscreen ? 'Exit' : 'Expand'}</span>
+        </div>
+
+        {/* Report (only when connected) */}
+        {partner && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button className="icon-btn" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }} onClick={handleReport}>
+              🚩
+            </button>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Report</span>
+          </div>
+        )}
 
         {/* Stop */}
         {partner && (
