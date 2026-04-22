@@ -20,7 +20,7 @@ export default function LandingPage() {
   }, []);
 
   const copyUpi = () => {
-    navigator.clipboard.writeText('vishnukookkal@okaxis'); // placeholder
+    navigator.clipboard.writeText('vishnukthekkil@okaxis'); // placeholder
     setUpiCopied(true);
     setTimeout(() => setUpiCopied(false), 2000);
   };
