@@ -5,11 +5,15 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space', display: 'swap' });
 
 export const metadata = {
-  title: 'TalkRandom – Talk to Strangers Instantly',
-  description: 'Random video chat with people around the world. No sign-up required. Start instantly.',
+  title: 'LEAD Connect – Beta',
+  description: 'A modern stranger video chat platform built for meaningful student connections at LEAD College.',
+  icons: {
+    icon: '/Assets/Images/Leadconnect-loading.PNG',
+    apple: '/Assets/Images/Leadconnect-loading.PNG',
+  },
   openGraph: {
-    title: 'TalkRandom – Random Video Chat',
-    description: 'Meet strangers instantly with anonymous video and text chat.',
+    title: 'LEAD Connect – Student Video Chat',
+    description: 'Connect with students across departments instantly and anonymously.',
     type: 'website',
   },
 };
