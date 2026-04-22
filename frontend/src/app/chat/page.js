@@ -315,9 +315,30 @@ export default function ChatPage() {
     ? { left: pipPos.x, top: pipPos.y, right: 'auto', bottom: 'auto' }
     : { right: 16, top: 80 };
 
+  // ── Swipe to skip ──────────────────────────────────────────
+  const touchStartRef = useRef(null);
+  const handleTouchStart = (e) => {
+    touchStartRef.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e) => {
+    if (!touchStartRef.current) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const distance = touchStartRef.current - touchEnd;
+    
+    // Swipe left (distance > 50px) to skip
+    if (distance > 50 && (partner || isMatching)) {
+      skipChat();
+    }
+    touchStartRef.current = null;
+  };
+
   // ── Render ──────────────────────────────────────────────────
   return (
-    <div className="chat-app">
+    <div 
+      className="chat-app"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Remote video — full screen background */}
       <video
         ref={remoteVideoRef}
