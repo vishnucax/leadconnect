@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, FlipHorizontal, X, Send } from 'lucide-react';
+import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, FlipHorizontal, X, Send, Video } from 'lucide-react';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
