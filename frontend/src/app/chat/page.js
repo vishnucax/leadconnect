@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -15,15 +15,8 @@ function getGuestId() {
   return id;
 }
 
-function formatTime(d) {
-  return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-const EMOJIS = ['😂','❤️','👍','🔥','😍','🎉','💀','🤣','😭','✨'];
-
 export default function ChatPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const [partner, setPartner] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -32,14 +25,9 @@ export default function ChatPage() {
   const [isMatching, setIsMatching] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const [socketStatus, setSocketStatus] = useState('connecting');
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [mediaError, setMediaError] = useState(null);
   const [isMediaReady, setIsMediaReady] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [requiresPlay, setRequiresPlay] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [pipPos, setPipPos] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -53,16 +41,13 @@ export default function ChatPage() {
   const pendingRef = useRef([]);
   const partnerRef = useRef(null);
   const pipRef = useRef(null);
-  const typingTimer = useRef(null);
 
-  // ── Set body class ──────────────────────────────────────────
   useEffect(() => {
     document.body.classList.add('chat-body');
     document.body.classList.remove('landing-body');
     return () => document.body.classList.remove('chat-body');
   }, []);
 
-  // ── Media ───────────────────────────────────────────────────
   const initMedia = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -71,13 +56,12 @@ export default function ChatPage() {
       setIsMediaReady(true);
       return stream;
     } catch (err) {
-      setMediaError(err.name === 'NotAllowedError' ? 'Camera/mic access denied.' : 'No camera found.');
+      setMediaError('Camera/mic access denied.');
       setIsMediaReady(true);
       return null;
     }
   }, []);
 
-  // ── Peer cleanup ────────────────────────────────────────────
   const cleanupPeer = useCallback(() => {
     if (peerRef.current) {
       peerRef.current.ontrack = null;
@@ -92,20 +76,17 @@ export default function ChatPage() {
   const handleCleanup = useCallback((msg = true) => {
     cleanupPeer();
     if (msg && partnerRef.current)
-      setMessages(p => [...p, { text: 'Stranger disconnected.', isSystem: true, t: Date.now() }]);
+      setMessages(p => [...p, { text: 'Stranger disconnected.', isSystem: true }]);
     partnerRef.current = null;
     setPartner(null);
     setIsMatching(false);
-    setConnectionStatus('disconnected');
     setRequiresPlay(false);
   }, [cleanupPeer]);
 
-  // ── WebRTC ──────────────────────────────────────────────────
   const startWebRTC = useCallback(async (initiator, relay = false) => {
     const sock = socketRef.current;
     if (!sock) return;
     cleanupPeer();
-    setConnectionStatus('connecting');
 
     let iceConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     try {
@@ -152,14 +133,13 @@ export default function ChatPage() {
     pc.oniceconnectionstatechange = () => {
       const s = pc.iceConnectionState;
       if (s === 'connected' || s === 'completed') {
-        setConnectionStatus('connected');
         if (remoteVideoRef.current?.paused && remoteVideoRef.current?.srcObject)
           remoteVideoRef.current.play().catch(() => setRequiresPlay(true));
       } else if (s === 'failed') {
         if (!relay) startWebRTC(initiator, true);
-        else { setConnectionStatus('disconnected'); handleCleanup(false); }
+        else handleCleanup(false);
       } else if (s === 'disconnected' || s === 'closed') {
-        setConnectionStatus('disconnected');
+        handleCleanup(false); // Only message handled by socket event
       }
     };
 
@@ -173,7 +153,6 @@ export default function ChatPage() {
     }
   }, [cleanupPeer, handleCleanup]);
 
-  // ── Socket ──────────────────────────────────────────────────
   useEffect(() => {
     const guestId = getGuestId();
     const sock = io(SOCKET_URL, {
@@ -188,30 +167,22 @@ export default function ChatPage() {
     sock.on('connect_error', () => setSocketStatus('error'));
     sock.on('disconnect', () => setSocketStatus('connecting'));
     sock.on('onlineCount', setOnlineCount);
-    sock.on('queueCount', () => {});
 
     sock.on('matched', ({ partner: p, initiator }) => {
       partnerRef.current = p;
       setPartner(p);
       setIsMatching(false);
-      setMessages([{ text: '🎉 Connected! Say hi to your new stranger.', isSystem: true, t: Date.now() }]);
+      setMessages([{ text: 'Connected to a stranger!', isSystem: true }]);
       startWebRTC(initiator);
     });
 
     sock.on('receiveMessage', (msg) => {
-      setMessages(prev => [...prev, { ...msg, t: Date.now() }]);
-      setIsTyping(false);
-    });
-
-    sock.on('typing', () => {
-      setIsTyping(true);
-      clearTimeout(typingTimer.current);
-      typingTimer.current = setTimeout(() => setIsTyping(false), 2000);
+      setMessages(prev => [...prev, msg]);
     });
 
     sock.on('partnerDisconnected', () => handleCleanup(true));
     sock.on('sessionEnded', ({ reason }) => {
-      setMessages(p => [...p, { text: reason === 'partner_skipped' ? 'Stranger skipped.' : 'Session ended.', isSystem: true, t: Date.now() }]);
+      setMessages(p => [...p, { text: reason === 'partner_skipped' ? 'Stranger skipped.' : 'Session ended.', isSystem: true }]);
       handleCleanup(false);
     });
 
@@ -224,7 +195,6 @@ export default function ChatPage() {
     };
   }, []); // eslint-disable-line
 
-  // ── Chat actions ────────────────────────────────────────────
   const startChat = useCallback(() => {
     if (!isMediaReady || !socketRef.current?.connected) return;
     handleCleanup(false);
@@ -239,28 +209,16 @@ export default function ChatPage() {
     setTimeout(() => {
       setIsMatching(true);
       socketRef.current?.emit('joinQueue', { id: getGuestId(), role: 'guest' });
-    }, 300);
-  }, [handleCleanup]);
-
-  const endChat = useCallback(() => {
-    socketRef.current?.emit('endSession');
-    handleCleanup(false);
-    setMessages([{ text: 'Session ended. Start again anytime.', isSystem: true, t: Date.now() }]);
+    }, 200);
   }, [handleCleanup]);
 
   const sendMessage = useCallback((e) => {
     e?.preventDefault();
     if (!inputText.trim() || !partnerRef.current) return;
-    setMessages(p => [...p, { text: inputText, sender: 'me', t: Date.now() }]);
+    setMessages(p => [...p, { text: inputText, sender: 'me' }]);
     socketRef.current?.emit('sendMessage', inputText);
     setInputText('');
-    setShowEmoji(false);
   }, [inputText]);
-
-  const handleTyping = (e) => {
-    setInputText(e.target.value);
-    socketRef.current?.emit('typing');
-  };
 
   const toggleCamera = () => {
     const t = localStreamRef.current?.getVideoTracks()[0];
@@ -276,10 +234,9 @@ export default function ChatPage() {
     setIsMicOn(t.enabled);
   };
 
-  // Auto-scroll
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // ── PiP drag ────────────────────────────────────────────────
+  // PiP Drag
   const onPipPointerDown = (e) => {
     e.preventDefault();
     const rect = pipRef.current.getBoundingClientRect();
@@ -292,7 +249,7 @@ export default function ChatPage() {
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       const vw = window.innerWidth, vh = window.innerHeight;
-      const pw = pipRef.current?.offsetWidth || 110, ph = pipRef.current?.offsetHeight || 160;
+      const pw = pipRef.current?.offsetWidth || 100, ph = pipRef.current?.offsetHeight || 140;
       setPipPos({
         x: Math.max(8, Math.min(cx - dragOffset.current.x, vw - pw - 8)),
         y: Math.max(8, Math.min(cy - dragOffset.current.y, vh - ph - 80)),
@@ -311,313 +268,159 @@ export default function ChatPage() {
     };
   }, [isDragging]);
 
-  // ── Default PiP position ────────────────────────────────────
-  const pipStyle = pipPos.x !== null
-    ? { left: pipPos.x, top: pipPos.y, right: 'auto', bottom: 'auto' }
-    : { right: 16, top: 80 };
+  const pipStyle = pipPos.x !== null ? { left: pipPos.x, top: pipPos.y, right: 'auto', bottom: 'auto' } : { right: 16, top: 70 };
 
-  // ── Fullscreen toggle ──────────────────────────────────────
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
-      setIsFullscreen(false);
-    }
-  };
-
-  // ── Report User ────────────────────────────────────────────
-  const handleReport = () => {
-    alert("User reported. They have been flagged for review.");
-    skipChat(); // Immediately skip after reporting
-  };
-
-  // ── Swipe to skip ──────────────────────────────────────────
+  // Swipe logic
   const touchStartRef = useRef(null);
-  const handleTouchStart = (e) => {
-    touchStartRef.current = e.touches[0].clientX;
-  };
+  const handleTouchStart = (e) => { touchStartRef.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
     if (!touchStartRef.current) return;
-    const touchEnd = e.changedTouches[0].clientX;
-    const distance = touchStartRef.current - touchEnd;
-    
-    // Swipe left (distance > 50px) to skip
-    if (distance > 50 && (partner || isMatching)) {
-      skipChat();
-    }
+    const distance = touchStartRef.current - e.changedTouches[0].clientX;
+    if (distance > 60 && (partner || isMatching)) skipChat();
     touchStartRef.current = null;
   };
 
-  // ── Render ──────────────────────────────────────────────────
   return (
-    <div 
-      className="chat-app"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Remote video — full screen background */}
+    <div className="tiktok-layout" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      
+      {/* 1. DOMINANT FULLSCREEN VIDEO */}
       <video
         ref={remoteVideoRef}
         autoPlay playsInline
-        className="remote-video-bg"
-        style={{ opacity: partner ? 1 : 0 }}
+        className={`remote-video-fullscreen ${partner ? 'opacity-100' : 'opacity-0'}`}
       />
 
       {/* Manual play overlay */}
       {requiresPlay && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 50,
-          background: 'rgba(0,0,0,0.7)', display: 'flex',
-          flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
-        }}>
-          <p style={{ color: '#fff', fontWeight: 600 }}>Tap to enable audio/video</p>
-          <button className="btn-primary" onClick={() => {
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm gap-4">
+          <p className="text-white font-bold">Tap to enable audio/video</p>
+          <button className="tt-btn-primary px-8 py-3" onClick={() => {
             remoteVideoRef.current?.play().catch(() => {});
             setRequiresPlay(false);
-          }}>▶ Enable A/V</button>
+          }}>▶ Play</button>
         </div>
       )}
 
-      {/* Search / waiting overlay */}
+      {/* 2. MATCHING / IDLE SCREEN (Shows when no partner) */}
       {!partner && (
-        <div className="search-overlay">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
           {isMatching ? (
-            <>
-              <div className="radar-wrapper">
-                <div className="radar-ring" />
-                <div className="radar-ring" />
-                <div className="radar-ring" />
-                <div className="radar-center">📡</div>
+            <div className="flex flex-col items-center gap-6">
+              <div className="tt-radar">
+                <div className="tt-radar-ring" />
+                <div className="tt-radar-ring delay-1" />
+                <div className="tt-radar-center">📡</div>
               </div>
-              <p style={{ fontFamily: 'var(--font-space)', fontWeight: 700, fontSize: 20 }}>
-                Finding someone…
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-                {onlineCount} people online right now
-              </p>
-              <button className="btn-secondary" style={{ marginTop: 8 }} onClick={endChat}>
+              <h2 className="text-2xl font-bold tracking-tight text-white/90">Finding someone...</h2>
+              <p className="text-white/50 text-sm">{onlineCount} online globally</p>
+              <button className="tt-btn-glass mt-4 px-6 py-2" onClick={() => { socketRef.current?.emit('endSession'); handleCleanup(false); }}>
                 Cancel
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <div style={{
-                width: 96, height: 96, borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.15))',
-                border: '2px solid rgba(139,92,246,0.4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 40, marginBottom: 8,
-              }}>
+            <div className="flex flex-col items-center gap-6 text-center px-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-600/40 to-blue-500/40 flex items-center justify-center text-4xl border border-white/10 shadow-[0_0_40px_rgba(139,92,246,0.3)]">
                 {mediaError ? '⚠️' : '👤'}
               </div>
-              {mediaError && (
-                <p style={{ color: '#f87171', fontSize: 14, textAlign: 'center', maxWidth: 260, marginBottom: 8 }}>
-                  {mediaError}
-                </p>
-              )}
-              <p style={{ fontFamily: 'var(--font-space)', fontWeight: 700, fontSize: 22, textAlign: 'center' }}>
-                Ready to connect?
+              <h1 className="text-3xl font-bold text-white tracking-tight">Ready?</h1>
+              <p className="text-white/60 text-sm max-w-xs">
+                {mediaError || "Swipe left to skip. Be respectful. Have fun."}
               </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 8 }}>
-                {onlineCount > 0 ? `${onlineCount} people online` : 'Connecting to server…'}
-              </p>
-              <button
-                className="btn-primary"
-                style={{ fontSize: 16, padding: '16px 40px', marginTop: 8 }}
+              <button 
+                className="tt-btn-primary mt-4 w-full max-w-[240px] py-4 text-lg"
                 onClick={startChat}
                 disabled={!isMediaReady || socketStatus !== 'connected'}
               >
-                {!isMediaReady ? '🔄 Initializing…' : socketStatus !== 'connected' ? '⚡ Connecting…' : '🎥 Start Video Chat'}
+                {!isMediaReady ? 'Initializing...' : socketStatus !== 'connected' ? 'Connecting...' : 'Tap to Start'}
               </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Top bar */}
-      <div className="chat-topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={() => { socketRef.current?.disconnect(); router.push('/'); }}
-            style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: 13 }}
-          >
-            ← Back
-          </button>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#8b5cf6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
-            📡
-          </div>
-          <span style={{ fontFamily: 'var(--font-space)', fontWeight: 700, fontSize: 15 }}>TalkRandom</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {partner && (
-            <div className={`status-pill ${connectionStatus === 'connected' ? 'status-online' : 'status-connecting'}`}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: connectionStatus === 'connected' ? '#22c55e' : '#facc15' }} />
-              {connectionStatus === 'connected' ? 'Connected' : 'Connecting…'}
             </div>
           )}
-          <div className="status-pill" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: socketStatus === 'connected' ? '#22c55e' : '#ef4444' }} />
-            {onlineCount} online
-          </div>
         </div>
-      </div>
-
-      {/* Partner label */}
-      {partner && (
-        <div className="partner-label">Stranger 🌍</div>
       )}
 
-      {/* PiP Self Video */}
+      {/* 3. TOP OVERLAY BAR */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent pt-[calc(16px+env(safe-area-inset-top))]">
+        <div className="flex items-center gap-3">
+          {partner && (
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-xs font-bold text-white/90">LIVE</span>
+            </div>
+          )}
+          <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/70">
+            👁 {onlineCount}
+          </div>
+        </div>
+        <button onClick={() => { socketRef.current?.disconnect(); router.push('/'); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white/80 hover:bg-white/20 transition-colors">
+          ✕
+        </button>
+      </div>
+
+      {/* 4. DRAGGABLE SELF PIP */}
       <div
         ref={pipRef}
-        className="self-video-pip"
+        className="absolute z-30 w-[100px] h-[140px] sm:w-[130px] sm:h-[180px] rounded-xl overflow-hidden border border-white/20 shadow-2xl bg-black/50"
         style={{ ...pipStyle, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseDown={onPipPointerDown}
         onTouchStart={(e) => onPipPointerDown(e.touches[0])}
       >
-        <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-        {!isCameraOn && (
-          <div style={{ position: 'absolute', inset: 0, background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>📷</div>
-        )}
+        <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+        {!isCameraOn && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 text-2xl">📷</div>}
       </div>
 
-      {/* Chat Overlay */}
-      <div className={`chat-overlay ${chatOpen ? 'open' : ''}`}>
-        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'rgba(0,0,0,0.3)' }}>
-          <span style={{ fontWeight: 700, fontSize: 15 }}>💬 Live Chat</span>
-          <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
-        </div>
-
-        <div className="chat-messages">
-          {messages.length === 0 && (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
-              Start chatting — messages appear here.
-            </p>
-          )}
-          {messages.map((msg, i) => msg.isSystem ? (
-            <div key={i} className="msg-bubble system">{msg.text}</div>
-          ) : (
-            <div key={i}>
-              <div className={`msg-bubble ${msg.sender === 'me' ? 'me' : 'them'}`}>{msg.text}</div>
-              <div className="msg-time" style={{ textAlign: msg.sender === 'me' ? 'right' : 'left' }}>
-                {msg.t ? formatTime(msg.t) : ''}
-              </div>
+      {/* 5. TIKTOK STYLE OVERLAID CHAT */}
+      <div className="absolute bottom-[80px] left-4 right-[70px] max-h-[40vh] z-20 flex flex-col justify-end pointer-events-none">
+        <div className="overflow-y-auto w-full flex flex-col gap-2 no-scrollbar pb-2 pointer-events-auto" style={{ maskImage: 'linear-gradient(to top, black 80%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to top, black 80%, transparent 100%)' }}>
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+              {msg.isSystem ? (
+                <span className="px-3 py-1 text-xs font-semibold text-white/70 bg-black/40 backdrop-blur-sm rounded-full">
+                  {msg.text}
+                </span>
+              ) : (
+                <span className={`px-4 py-2 text-sm max-w-[85%] break-words rounded-2xl ${msg.sender === 'me' ? 'bg-indigo-600/90 text-white rounded-br-sm' : 'bg-black/50 backdrop-blur-md text-white rounded-bl-sm border border-white/10'}`}>
+                  {msg.text}
+                </span>
+              )}
             </div>
           ))}
-          {isTyping && (
-            <div className="typing-indicator">
-              <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
-            </div>
-          )}
           <div ref={chatEndRef} />
         </div>
-
-        {/* Emoji picker */}
-        {showEmoji && (
-          <div style={{ padding: '8px 12px', display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)' }}>
-            {EMOJIS.map(e => (
-              <button key={e} onClick={() => setInputText(p => p + e)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>{e}</button>
-            ))}
-          </div>
-        )}
-
-        <div className="chat-input-bar">
-          <button onClick={() => setShowEmoji(p => !p)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', flexShrink: 0 }}>😊</button>
-          <form onSubmit={sendMessage} style={{ flex: 1, display: 'flex', gap: 8 }}>
-            <input
-              className="chat-input"
-              placeholder={partner ? 'Type a message…' : 'Connect first…'}
-              value={inputText}
-              onChange={handleTyping}
-              disabled={!partner}
-            />
-            <button type="submit" disabled={!partner || !inputText.trim()}
-              style={{
-                background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
-                border: 'none', borderRadius: '50%', width: 40, height: 40,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0, opacity: (!partner || !inputText.trim()) ? 0.4 : 1,
-              }}>
-              ➤
-            </button>
-          </form>
-        </div>
       </div>
 
-      {/* Bottom Dock Controls */}
-      <div className="bottom-dock">
-        {/* Skip / Next */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button className="icon-btn next-btn" onClick={partner || isMatching ? skipChat : startChat}
-            title={partner ? 'Next Stranger' : 'Start'} disabled={!isMediaReady}>
-            {partner || isMatching ? '⏭' : '▶'}
-          </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{partner || isMatching ? 'Next' : 'Start'}</span>
-        </div>
-
-        {/* Mic */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button className={`icon-btn ${!isMicOn ? 'danger' : ''}`} onClick={toggleMic}>
-            {isMicOn ? '🎤' : '🔇'}
-          </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isMicOn ? 'Mute' : 'Unmute'}</span>
-        </div>
-
-        {/* Camera */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button className={`icon-btn ${!isCameraOn ? 'danger' : ''}`} onClick={toggleCamera}>
-            {isCameraOn ? '📷' : '🚫'}
-          </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isCameraOn ? 'Camera' : 'Cam Off'}</span>
-        </div>
-
-        {/* Chat toggle */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button className={`icon-btn ${chatOpen ? 'active' : ''}`} onClick={() => setChatOpen(p => !p)}
-            style={{ position: 'relative' }}>
-            💬
-            {messages.filter(m => !m.isSystem).length > 0 && !chatOpen && (
-              <div style={{
-                position: 'absolute', top: -4, right: -4, width: 16, height: 16,
-                borderRadius: '50%', background: '#8b5cf6', fontSize: 9,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700,
-              }}>
-                {messages.filter(m => !m.isSystem && m.sender !== 'me').length || ''}
-              </div>
-            )}
-          </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Chat</span>
-        </div>
-
-        {/* Fullscreen (Desktop only mostly, or hidden on small screens if crowded) */}
-        <div className="hidden sm:flex" style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button className={`icon-btn ${isFullscreen ? 'active' : ''}`} onClick={toggleFullscreen}>
-            {isFullscreen ? '↙️' : '↗️'}
-          </button>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isFullscreen ? 'Exit' : 'Expand'}</span>
-        </div>
-
-        {/* Report (only when connected) */}
+      {/* 6. RIGHT SIDE VERTICAL ACTION CONTROLS */}
+      <div className="absolute bottom-[90px] right-4 z-30 flex flex-col gap-4">
         {partner && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <button className="icon-btn" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }} onClick={handleReport}>
+          <>
+            <button className="tt-icon-btn bg-red-500/20 text-red-500 border-red-500/30" onClick={() => { alert("Reported."); skipChat(); }}>
               🚩
             </button>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Report</span>
-          </div>
+            <button className={`tt-icon-btn ${!isCameraOn ? 'text-red-400' : ''}`} onClick={toggleCamera}>
+              {isCameraOn ? '📷' : '🚫'}
+            </button>
+            <button className={`tt-icon-btn ${!isMicOn ? 'text-red-400' : ''}`} onClick={toggleMic}>
+              {isMicOn ? '🎤' : '🔇'}
+            </button>
+          </>
         )}
-
-        {/* Stop */}
-        {partner && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <button className="icon-btn danger" onClick={endChat}>✖</button>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Stop</span>
-          </div>
-        )}
+        <button className="tt-icon-btn bg-white/20 hover:bg-white/30 backdrop-blur-lg scale-110 shadow-[0_0_20px_rgba(255,255,255,0.2)]" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
+          {partner || isMatching ? '⏭' : '▶'}
+        </button>
       </div>
+
+      {/* 7. BOTTOM CHAT INPUT BAR */}
+      <form onSubmit={sendMessage} className="absolute bottom-0 left-0 right-0 z-30 p-4 pt-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex gap-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <input
+          className="flex-1 bg-black/50 backdrop-blur-md border border-white/10 text-white text-sm rounded-full px-5 py-3 outline-none placeholder:text-white/40 focus:border-indigo-500/50 transition-colors"
+          placeholder={partner ? "Say something..." : "Connect to chat"}
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          disabled={!partner}
+        />
+        <button type="submit" disabled={!partner || !inputText.trim()} className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-indigo-600 rounded-full text-white opacity-90 hover:opacity-100 disabled:opacity-30 transition-opacity">
+          ➤
+        </button>
+      </form>
     </div>
   );
 }
