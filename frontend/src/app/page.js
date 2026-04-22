@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, MessageSquare, Heart, Github, Globe, Instagram, CheckCircle2, Navigation, Loader2, Mail, Linkedin, Copy, Check } from 'lucide-react';
+import { Video, MessageSquare, Heart, Github, Globe, Instagram, CheckCircle2, Navigation, Mail, Linkedin, Copy, Check, Share2, Lightbulb } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -15,44 +15,92 @@ export default function LandingPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 2800);
     return () => clearTimeout(timer);
   }, []);
 
   const copyUpi = () => {
-    navigator.clipboard.writeText('vishnukthekkil@okaxis'); // placeholder
+    navigator.clipboard.writeText('vishnukthekkil@okaxis');
     setUpiCopied(true);
     setTimeout(() => setUpiCopied(false), 2000);
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'LEAD Connect',
+          text: 'Join LEAD Connect to meet and chat with other students!',
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-[#f8fafc] flex flex-col items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           className="flex flex-col items-center"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="/Assets/Images/Leadconnect-loading.PNG" 
-            alt="LEAD Connect Loading" 
-            className="w-32 h-32 mb-6 object-contain"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
+          <div className="relative mb-10">
+            <motion.div
+              animate={{ 
+                scale: [1, 1.05, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ 
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="relative z-10"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src="/Assets/Images/Leadconnect-loading.PNG" 
+                alt="LEAD Connect Loading" 
+                className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-[0_0_40px_rgba(59,130,246,0.6)]"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            </motion.div>
+            <motion.div 
+              animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 bg-blue-500 rounded-full blur-[60px] -z-10"
+            />
+          </div>
           
-          <Loader2 className="w-8 h-8 text-[#3b82f6] animate-spin mb-6" />
-          
-          <h1 className="text-2xl font-bold text-[#0f172a] mb-2 tracking-tight">LEAD Connect Beta</h1>
-          <p className="text-[#475569] font-medium tracking-wide">Connecting People Beyond Departments</p>
+          <motion.h1 
+            initial={{ y: 15, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
+            className="text-2xl md:text-3xl font-extrabold text-[#0f172a] mb-2 tracking-tight text-center px-4"
+          >
+            Connecting People Beyond Departments
+          </motion.h1>
+          <motion.p 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-[#475569] font-medium tracking-wide text-sm md:text-base uppercase"
+          >
+            LEAD Connect Beta
+          </motion.p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="landing-page bg-[#f8fafc]">
+    <div className="landing-page bg-[#f8fafc] overflow-hidden">
       {/* Background Orbs */}
       <div className="hero-bg">
         <div className="orb orb-1"></div>
@@ -60,7 +108,7 @@ export default function LandingPage() {
         <div className="grid-lines"></div>
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-20 pb-24 flex flex-col items-center">
+      <div className="relative z-10 w-full px-6 pt-20 pb-24 flex flex-col items-center">
         
         {/* Header / Logo */}
         <motion.div 
@@ -79,12 +127,12 @@ export default function LandingPage() {
           <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider">Beta</span>
         </motion.div>
 
-        {/* HERO SECTION */}
+        {/* 1. HERO SECTION */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center max-w-3xl mb-16"
+          className="text-center w-full max-w-5xl mx-auto mb-24"
         >
           <h1 className="text-5xl md:text-6xl font-extrabold text-[#0f172a] tracking-tight mb-6 leading-[1.1]">
             Meet New People <br className="hidden md:block"/>
@@ -113,16 +161,146 @@ export default function LandingPage() {
             onClick={() => setShowSupportModal(true)}
             className="mt-6 flex items-center justify-center gap-2 mx-auto text-[#64748b] hover:text-[#3b82f6] transition-colors font-medium text-sm"
           >
-            <Heart className="w-4 h-4" /> Support Developer
+            <Heart className="w-4 h-4" /> Support Us
           </button>
         </motion.div>
 
-        {/* ABOUT LEAD COLLEGE PALAKKAD SECTION */}
+        {/* 2. ABOUT LEAD CONNECT SECTION */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="w-full mt-8 mb-24"
+          className="w-full max-w-5xl mx-auto mb-24"
+        >
+          <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -z-10 opacity-60 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full blur-[80px] -z-10 opacity-60 pointer-events-none" />
+            
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="/Assets/Images/Leadconnect-logo.PNG" 
+              alt="LEAD Connect Logo" 
+              className="w-20 h-20 object-contain mx-auto mb-6 drop-shadow-xl"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+            
+            <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-8 tracking-tight">About LEAD Connect</h2>
+            
+            <div className="max-w-3xl mx-auto text-[#475569] text-base md:text-lg leading-relaxed space-y-6">
+              <p className="font-bold text-[#0f172a] text-xl italic">"Everyone starts as strangers."</p>
+              <p>
+                At some point, every friend was once a stranger. Departments often separate students from each other, limiting the chance to meet incredible peers right next door.
+              </p>
+              <p>
+                To help students connect, make friendships, recognize familiar faces, and build meaningful conversations, we created LEAD Connect. Built specifically for LEAD students, it's a safe social connection platform designed to turn strangers into friends.
+              </p>
+            </div>
+
+            <div className="mt-10 pt-10 border-t border-slate-200/50 flex flex-col items-center">
+              <button 
+                onClick={handleShare}
+                className="group flex items-center justify-center gap-3 py-4 px-8 bg-white border border-slate-200 rounded-full text-[#0f172a] font-bold text-base md:text-lg hover:border-blue-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all"
+              >
+                <Share2 className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" /> 
+                Share with your mates & chill
+              </button>
+              <p className="text-sm text-slate-400 mt-4 font-medium">Help more LEAD students connect and make new friendships.</p>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* 3. WHAT IS LEAD CONNECT SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full max-w-5xl mx-auto mb-24"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-[#0f172a] mb-12 tracking-tight">What is LEAD Connect?</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="glass p-8 rounded-3xl text-center transform transition-transform hover:-translate-y-1 duration-300">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Globe className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Beyond Boundaries</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">A real-time stranger video and live chat platform created to help students connect and socialize beyond their own departments.</p>
+            </div>
+            <div className="glass p-8 rounded-3xl text-center transform transition-transform hover:-translate-y-1 duration-300">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Open Beta</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">Currently in beta testing. Temporarily open for everyone to experience the platform seamlessly and provide valuable feedback.</p>
+            </div>
+            <div className="glass p-8 rounded-3xl text-center transform transition-transform hover:-translate-y-1 duration-300">
+              <div className="w-14 h-14 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Navigation className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Future Access</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">Future major updates will restrict access exclusively to verified LEAD College students to ensure a safe, closed community.</p>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* 4. FUTURE VISION / ROADMAP SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full max-w-5xl mx-auto mb-24"
+        >
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center p-3 bg-blue-50 text-blue-600 rounded-2xl mb-4">
+              <Lightbulb className="w-6 h-6" />
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-4 tracking-tight">Future Vision & Roadmap</h2>
+            <p className="text-[#475569] max-w-2xl mx-auto leading-relaxed text-lg">
+              LEAD Connect is <span className="font-bold text-[#0f172a]">NOT</span> intended to remain just a stranger video chat platform. This is only the FIRST STEP.
+            </p>
+          </div>
+
+          <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] mb-8">
+            <h3 className="text-2xl font-bold text-[#0f172a] mb-4 text-center">The Big Picture</h3>
+            <p className="text-center text-[#475569] text-base md:text-lg leading-relaxed mb-8 max-w-3xl mx-auto">
+              Our vision is to evolve LEAD Connect into a unique social media ecosystem built specifically for LEAD students. We envision a platform fostering student communities, verified student networks, college interactions, interest groups, and campus networking.
+              <br/><br/>
+              <span className="font-semibold text-blue-600">This stranger connection platform is just the beginning.</span>
+            </p>
+
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-10 pt-10 border-t border-slate-200/50">
+              {[
+                'Verified Student Login',
+                'AI Moderation Systems',
+                'Friend System',
+                'Interest Matching',
+                'Voice Rooms',
+                'College Communities',
+                'Mobile App',
+                'Student Feeds',
+                'Safer Moderation'
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3 p-4 bg-white/60 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <span className="font-bold text-[#0f172a] text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center">
+            <p className="text-[#475569] mb-6 font-medium">If you have unique ideas or suggestions for improving LEAD Connect, let us know.</p>
+            <a href="https://linkedin.com/in/vishnu-k-7-" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-[#0a66c2] text-white rounded-full font-bold hover:bg-[#084e96] transition-transform hover:-translate-y-1 shadow-[0_0_20px_rgba(10,102,194,0.3)]">
+              <Linkedin className="w-5 h-5" /> Connect on LinkedIn
+            </a>
+          </div>
+        </motion.section>
+
+        {/* 5. ABOUT LEAD COLLEGE PALAKKAD SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full max-w-5xl mx-auto mb-24"
         >
           <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] overflow-hidden">
             <div className="flex flex-col md:flex-row items-center gap-10">
@@ -137,93 +315,33 @@ export default function LandingPage() {
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
                   <div className="absolute bottom-4 left-4 z-20">
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/30 uppercase tracking-wider">Palakkad, Kerala</span>
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/30 uppercase tracking-wider shadow-sm">Palakkad, Kerala</span>
                   </div>
                 </div>
               </div>
               <div className="w-full md:w-1/2 text-center md:text-left">
-                <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-5 tracking-tight">About LEAD College Palakkad</h2>
+                <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-5 tracking-tight">About LEAD College (Autonomous), Palakkad</h2>
                 <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-6">
-                  LEAD College Palakkad stands at the forefront of innovation-driven learning, fostering a vibrant student community dedicated to excellence. Our modern education environment is designed to cultivate leadership, inspire creativity, and promote a highly collaborative culture. 
+                  As an autonomous institution, LEAD College is dedicated to providing innovation-driven education that bridges the gap between academia and industry. Our modern campus environment is built to foster an entrepreneurial culture and nurture the leaders of tomorrow.
                 </p>
                 <p className="text-[#475569] text-[15px] md:text-base leading-relaxed font-medium">
-                  We believe in holistic student growth—equipping the next generation of thinkers and builders to shape the future with passion and purpose.
+                  With a strong emphasis on leadership development and continuous student growth, we empower our students to turn their boldest ideas into reality and succeed in a rapidly evolving global landscape.
                 </p>
               </div>
             </div>
           </div>
         </motion.section>
 
-        {/* WHAT IS LEAD CONNECT SECTION */}
+        {/* 6. MEET THE DEVELOPER SECTION */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="w-full mb-24"
+          className="w-full max-w-5xl mx-auto mb-24"
         >
-          <h2 className="text-3xl font-bold text-center text-[#0f172a] mb-12">What is LEAD Connect?</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="glass p-8 rounded-3xl text-center">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Globe className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Beyond Boundaries</h3>
-              <p className="text-[#475569] text-sm leading-relaxed">A platform created to help students connect, socialize, and make friendships beyond department boundaries.</p>
-            </div>
-            <div className="glass p-8 rounded-3xl text-center">
-              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Open Beta</h3>
-              <p className="text-[#475569] text-sm leading-relaxed">Currently in beta testing and temporarily open for everyone to experience and provide feedback.</p>
-            </div>
-            <div className="glass p-8 rounded-3xl text-center">
-              <div className="w-14 h-14 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Navigation className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Future Roadmap</h3>
-              <p className="text-[#475569] text-sm leading-relaxed">Future updates will include restricted access exclusively for verified LEAD College students.</p>
-            </div>
+          <div className="text-center mb-10">
+             <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] tracking-tight">Meet the Developer</h2>
           </div>
-        </motion.section>
-
-        {/* ROADMAP SECTION */}
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="w-full mb-24 max-w-3xl mx-auto"
-        >
-          <h2 className="text-3xl font-bold text-center text-[#0f172a] mb-12">Planned Features</h2>
-          <div className="glass p-8 rounded-3xl">
-            <div className="flex flex-col gap-6">
-              {[
-                { title: 'Verified Student Login', desc: 'Secure login strictly for LEAD students' },
-                { title: 'Interest Matching', desc: 'Find peers based on skills and hobbies' },
-                { title: 'Mobile App', desc: 'Native iOS and Android application' },
-                { title: 'Safer Community Tools', desc: 'AI moderation and reporting system' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[#f1f5f9] border-2 border-[#cbd5e1] flex items-center justify-center flex-shrink-0 mt-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-[#0f172a] text-lg">{item.title}</h4>
-                    <p className="text-[#64748b] text-sm mt-1">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ABOUT DEVELOPER SECTION */}
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="w-full mb-24 max-w-4xl mx-auto"
-        >
           <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-100 flex flex-col md:flex-row items-center gap-10 relative overflow-hidden shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
             <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-blue-100 rounded-full blur-[100px] -z-10 opacity-60 pointer-events-none" />
             
@@ -238,27 +356,27 @@ export default function LandingPage() {
             </div>
             
             <div className="flex-1 text-center md:text-left z-10">
-              <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider mb-3">Lead Developer</div>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-2 tracking-tight">Vishnu K</h2>
-              <p className="text-[#3b82f6] font-semibold text-[15px] md:text-base mb-5">MCA Student & Realtime Systems Enthusiast</p>
-              <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-8 max-w-2xl">
-                Passionate builder with a focus on backend architecture, DevOps, and cloud technologies. I created LEAD Connect to bridge the gap between departments and foster a genuinely connected campus culture. My vision is to build meaningful platforms that empower student interaction and growth.
+              <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider mb-3 shadow-sm">Creator</div>
+              <h3 className="text-3xl md:text-4xl font-bold text-[#0f172a] mb-2 tracking-tight">Vishnu K</h3>
+              <p className="text-[#3b82f6] font-semibold text-[15px] md:text-base mb-5">MCA Student • Backend & Realtime Systems Enthusiast</p>
+              <p className="text-[#475569] text-[15px] md:text-base leading-relaxed mb-8 max-w-2xl mx-auto md:mx-0">
+                I am deeply passionate about meaningful technology, with strong interests in DevOps, cloud infrastructure, and building scalable platforms. I created LEAD Connect with a clear vision: to develop a student-focused platform that genuinely empowers campus interaction and turns everyday strangers into lifelong friends.
               </p>
               
               <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0f172a] text-white flex items-center justify-center hover:bg-[#1e293b] hover:-translate-y-1 transition-all shadow-lg">
-                  <Github className="w-5 h-5" />
-                </a>
-                <a href="https://linkedin.com/in/vishnu-k-7-" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0a66c2] text-white flex items-center justify-center hover:bg-[#084e96] hover:-translate-y-1 transition-all shadow-lg">
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#fd5949] to-[#d6249f] text-white flex items-center justify-center hover:-translate-y-1 transition-all shadow-lg">
+                <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#fd5949] to-[#d6249f] text-white flex items-center justify-center hover:-translate-y-1 transition-transform shadow-lg">
                   <Instagram className="w-5 h-5" />
                 </a>
-                <a href="mailto:vishnukookkal@gmail.com" className="w-12 h-12 rounded-full bg-white border border-slate-200 text-[#0f172a] flex items-center justify-center hover:bg-slate-50 hover:-translate-y-1 transition-all shadow-sm">
+                <a href="mailto:vishnukookkal@gmail.com" className="w-12 h-12 rounded-full bg-white border border-slate-200 text-[#0f172a] flex items-center justify-center hover:bg-slate-50 hover:-translate-y-1 transition-transform shadow-sm">
                   <Mail className="w-5 h-5" />
                 </a>
-                <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-6 py-0 h-12 bg-white border border-slate-200 text-[#0f172a] rounded-full text-sm font-bold hover:bg-slate-50 hover:-translate-y-1 transition-all shadow-sm">
+                <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0f172a] text-white flex items-center justify-center hover:bg-[#1e293b] hover:-translate-y-1 transition-transform shadow-lg">
+                  <Github className="w-5 h-5" />
+                </a>
+                <a href="https://linkedin.com/in/vishnu-k-7-" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-[#0a66c2] text-white flex items-center justify-center hover:bg-[#084e96] hover:-translate-y-1 transition-transform shadow-lg">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-6 py-0 h-12 bg-white border border-slate-200 text-[#0f172a] rounded-full text-sm font-bold hover:bg-slate-50 hover:-translate-y-1 transition-transform shadow-sm">
                   <Globe className="w-4 h-4" /> Portfolio
                 </a>
               </div>
@@ -266,24 +384,24 @@ export default function LandingPage() {
           </div>
         </motion.section>
 
-        {/* SUPPORT US CARD (ABOVE FOOTER) */}
+        {/* 7. SUPPORT LEAD CONNECT SECTION */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="w-full mb-12 max-w-3xl mx-auto"
+          className="w-full max-w-5xl mx-auto mb-12"
         >
           <div className="glass p-8 md:p-12 rounded-[2rem] text-center border border-indigo-100 shadow-[0_8px_30px_rgba(59,130,246,0.08)] bg-gradient-to-b from-white/60 to-blue-50/30">
             <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
               <Heart className="w-8 h-8 fill-current" />
             </div>
-            <h2 className="text-3xl font-bold text-[#0f172a] mb-4">Support LEAD Connect</h2>
-            <p className="text-[#475569] text-base leading-relaxed max-w-xl mx-auto mb-8">
-              For deployment, server maintenance, platform improvements, and future development, your support helps keep LEAD Connect growing.
+            <h2 className="text-3xl font-bold text-[#0f172a] mb-4 tracking-tight">Support LEAD Connect</h2>
+            <p className="text-[#475569] text-base leading-relaxed max-w-xl mx-auto mb-8 font-medium">
+              For deployment, server maintenance, infrastructure costs, and future improvements, your support helps keep LEAD Connect growing.
             </p>
             <button 
               onClick={() => setShowSupportModal(true)}
-              className="btn-primary py-4 px-10 text-lg shadow-[0_0_30px_rgba(59,130,246,0.3)]"
+              className="btn-primary py-4 px-10 text-lg shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-transform"
             >
               <Heart className="w-5 h-5 fill-current" /> Support Us
             </button>
@@ -292,26 +410,26 @@ export default function LandingPage() {
 
       </div>
 
-      {/* FOOTER */}
+      {/* 8. FOOTER */}
       <footer className="border-t border-[#e2e8f0] bg-white py-12 relative z-10">
         <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-6">
           <div className="flex items-center gap-4">
-            <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#0f172a] hover:text-white transition-all">
+            <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#0f172a] hover:text-white transition-all shadow-sm">
               <Github className="w-5 h-5" />
             </a>
-            <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#3b82f6] hover:text-white transition-all">
+            <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#3b82f6] hover:text-white transition-all shadow-sm">
               <Globe className="w-5 h-5" />
             </a>
-            <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-gradient-to-tr hover:from-[#fd5949] hover:to-[#d6249f] hover:text-white transition-all">
+            <a href="https://www.instagram.com/v1hxnuu/" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-gradient-to-tr hover:from-[#fd5949] hover:to-[#d6249f] hover:text-white transition-all shadow-sm">
               <Instagram className="w-5 h-5" />
             </a>
           </div>
           <div className="text-center">
             <p className="text-[#64748b] text-sm font-medium">Developed by <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="text-[#3b82f6] hover:underline font-bold">Vishnu K</a></p>
-            <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#94a3b8]">
+            <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#94a3b8] font-medium">
               <a href="/privacy" className="hover:text-[#0f172a] transition-colors">Privacy Policy</a>
               <span>•</span>
-              <span>LEAD Connect Beta © {new Date().getFullYear()}</span>
+              <span className="font-bold text-slate-400">LEAD Connect Beta © {new Date().getFullYear()}</span>
             </div>
           </div>
         </div>
@@ -346,8 +464,8 @@ export default function LandingPage() {
                 <Heart className="w-8 h-8 fill-blue-600" />
               </div>
               
-              <h3 className="text-2xl font-extrabold text-[#0f172a] mb-2">Support the Developer</h3>
-              <p className="text-[#475569] text-sm leading-relaxed mb-6">
+              <h3 className="text-2xl font-extrabold text-[#0f172a] mb-2 tracking-tight">Support the Developer</h3>
+              <p className="text-[#475569] text-sm leading-relaxed mb-6 font-medium">
                 Your support helps cover server costs and keeps the platform running smoothly.
               </p>
               
@@ -368,7 +486,7 @@ export default function LandingPage() {
               {/* Copy UPI Option */}
               <button 
                 onClick={copyUpi}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 mb-4 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 mb-4 bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-colors shadow-sm"
               >
                 {upiCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 {upiCopied ? 'UPI ID Copied!' : 'Copy UPI ID'}
@@ -376,7 +494,7 @@ export default function LandingPage() {
 
               <button 
                 onClick={() => setShowSupportModal(false)}
-                className="w-full py-3 bg-[#0f172a] text-white font-bold rounded-xl hover:bg-[#1e293b] transition-colors"
+                className="w-full py-3 bg-[#0f172a] text-white font-bold rounded-xl hover:bg-[#1e293b] transition-colors shadow-md"
               >
                 Done
               </button>
