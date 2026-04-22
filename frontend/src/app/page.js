@@ -27,10 +27,13 @@ export default function LandingPage() {
           transition={{ duration: 0.8 }}
           className="flex flex-col items-center"
         >
-          {/* Simulated logo since image might not exist yet */}
-          <div className="w-24 h-24 mb-6 rounded-2xl bg-gradient-to-br from-[#0f172a] to-[#3b82f6] shadow-[0_0_40px_rgba(59,130,246,0.3)] flex items-center justify-center">
-             <span className="text-white text-3xl font-bold">LC</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src="/Assets/Images/Leadconnect-loading.PNG" 
+            alt="LEAD Connect Loading" 
+            className="w-32 h-32 mb-6 object-contain"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
           
           <Loader2 className="w-8 h-8 text-[#3b82f6] animate-spin mb-6" />
           
@@ -58,9 +61,13 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3 mb-16 bg-white/60 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border border-slate-200"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#0f172a] flex items-center justify-center">
-            <span className="text-white text-xs font-bold">LC</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src="/Assets/Images/Leadconnect-logo.PNG" 
+            alt="LEAD Connect Logo" 
+            className="w-8 h-8 object-contain"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
           <span className="font-bold text-[#0f172a] tracking-tight">LEAD Connect</span>
           <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider">Beta</span>
         </motion.div>
@@ -177,8 +184,13 @@ export default function LandingPage() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none" />
             
             <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 border-4 border-white shadow-lg flex-shrink-0">
-               {/* Simulate profile picture */}
-               <div className="w-full h-full bg-gradient-to-br from-[#1e293b] to-[#3b82f6] flex items-center justify-center text-white text-3xl font-bold">VK</div>
+               {/* eslint-disable-next-line @next/next/no-img-element */}
+               <img 
+                 src="/Assets/Images/leadcollege.png" 
+                 alt="Vishnu K" 
+                 className="w-full h-full object-cover"
+                 onError={(e) => { e.target.style.display = 'none'; }}
+               />
             </div>
             
             <div className="flex-1 text-center md:text-left">
