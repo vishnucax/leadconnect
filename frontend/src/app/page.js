@@ -1,326 +1,289 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Video, MessageSquare, Heart, Github, Globe, Instagram, CheckCircle2, Navigation, Loader2 } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [onlineCount, setOnlineCount] = useState(0);
-  const [animatedCount, setAnimatedCount] = useState(0);
-  const countRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
-  // Fetch online count
+  // Loading Screen effect
   useEffect(() => {
-    document.body.classList.add('landing-body');
-    document.body.classList.remove('chat-body');
-    return () => document.body.classList.remove('landing-body');
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch(`${SOCKET_URL}/api/stats`);
-        if (res.ok) {
-          const data = await res.json();
-          setOnlineCount(data.onlineCount || 0);
-        }
-      } catch {}
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Animate count
-  useEffect(() => {
-    if (onlineCount === 0) return;
-    let start = 0;
-    const step = Math.ceil(onlineCount / 40);
-    const timer = setInterval(() => {
-      start = Math.min(start + step, onlineCount);
-      setAnimatedCount(start);
-      if (start >= onlineCount) clearInterval(timer);
-    }, 30);
-    return () => clearInterval(timer);
-  }, [onlineCount]);
-
-  const features = [
-    {
-      icon: '⚡',
-      title: 'Instant Connection',
-      desc: 'Match with a real person in under 2 seconds. No waiting, no queues.',
-      color: 'rgba(234,179,8,0.15)',
-      border: 'rgba(234,179,8,0.25)',
-    },
-    {
-      icon: '🎭',
-      title: 'Stay Anonymous',
-      desc: 'No account needed. No tracking. Pure authentic conversation.',
-      color: 'rgba(139,92,246,0.12)',
-      border: 'rgba(139,92,246,0.25)',
-    },
-    {
-      icon: '📡',
-      title: 'HD Video & Audio',
-      desc: 'Crystal clear WebRTC video calling powered by modern browser tech.',
-      color: 'rgba(34,211,238,0.1)',
-      border: 'rgba(34,211,238,0.2)',
-    },
-    {
-      icon: '💬',
-      title: 'Live Text Chat',
-      desc: 'Chat alongside video. Send emoji, memes, and quick messages.',
-      color: 'rgba(236,72,153,0.1)',
-      border: 'rgba(236,72,153,0.2)',
-    },
-    {
-      icon: '🔒',
-      title: 'Private & Secure',
-      desc: 'Peer-to-peer encrypted video. We never store your conversations.',
-      color: 'rgba(34,197,94,0.1)',
-      border: 'rgba(34,197,94,0.2)',
-    },
-    {
-      icon: '📱',
-      title: 'Mobile First',
-      desc: 'Designed for phones. Works perfectly on any screen size.',
-      color: 'rgba(99,102,241,0.12)',
-      border: 'rgba(99,102,241,0.25)',
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          className="flex flex-col items-center"
+        >
+          {/* Simulated logo since image might not exist yet */}
+          <div className="w-24 h-24 mb-6 rounded-2xl bg-gradient-to-br from-[#0f172a] to-[#3b82f6] shadow-[0_0_40px_rgba(59,130,246,0.3)] flex items-center justify-center">
+             <span className="text-white text-3xl font-bold">LC</span>
+          </div>
+          
+          <Loader2 className="w-8 h-8 text-[#3b82f6] animate-spin mb-6" />
+          
+          <h1 className="text-2xl font-bold text-[#0f172a] mb-2 tracking-tight">LEAD Connect Beta</h1>
+          <p className="text-[#475569] font-medium tracking-wide">Connecting People Beyond Departments</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="landing-page">
-      {/* Animated Background */}
+    <div className="landing-page bg-[#f8fafc]">
+      {/* Background Orbs */}
       <div className="hero-bg">
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
+        <div className="grid-lines"></div>
       </div>
-      <div className="grid-lines" />
 
-      {/* Nav */}
-      <nav className="hero-content sticky top-0 z-50 flex items-center justify-between px-5 py-4 md:px-12"
-        style={{ background: 'rgba(7,8,10,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <div className="flex items-center gap-2.5">
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(139,92,246,0.4)',
-            fontSize: 18
-          }}>📡</div>
-          <span style={{ fontFamily: 'var(--font-space)', fontWeight: 700, fontSize: 18 }}>TalkRandom</span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="online-pill" style={{ display: 'none' }} id="nav-online">
-            <div className="online-dot" />
-            {animatedCount} online
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-20 pb-24 flex flex-col items-center">
+        
+        {/* Header / Logo */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-16 bg-white/60 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border border-slate-200"
+        >
+          <div className="w-8 h-8 rounded-lg bg-[#0f172a] flex items-center justify-center">
+            <span className="text-white text-xs font-bold">LC</span>
           </div>
-          <button className="btn-primary" style={{ padding: '10px 20px', fontSize: 14 }}
-            onClick={() => router.push('/chat')}>
-            Start Now →
-          </button>
-        </div>
-      </nav>
+          <span className="font-bold text-[#0f172a] tracking-tight">LEAD Connect</span>
+          <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider">Beta</span>
+        </motion.div>
 
-      {/* Hero */}
-      <section className="hero-content flex flex-col items-center text-center px-5 pt-20 pb-16 md:pt-32 md:pb-24">
-        {/* Badges row */}
-        <div className="flex items-center gap-3 mb-8 flex-wrap justify-center anim-fade-up">
-          <div className="badge badge-live">
-            <div className="live-dot" />
-            Live Now
-          </div>
-          <div className="online-pill">
-            <div className="online-dot" />
-            <span>{animatedCount > 0 ? `${animatedCount.toLocaleString()} people online` : 'Loading…'}</span>
-          </div>
-          <div className="badge badge-new">✨ No Sign-Up Required</div>
-        </div>
-
-        {/* Main headline */}
-        <h1 className="anim-fade-up delay-100"
-          style={{
-            fontFamily: 'var(--font-space)',
-            fontSize: 'clamp(40px, 8vw, 80px)',
-            fontWeight: 800,
-            lineHeight: 1.05,
-            letterSpacing: '-0.03em',
-            maxWidth: 800,
-            marginBottom: 20,
-          }}>
-          <span className="gradient-text">Talk to Strangers</span>
-          <br />Instantly.
-        </h1>
-
-        <p className="anim-fade-up delay-200"
-          style={{
-            fontSize: 'clamp(16px, 2.5vw, 20px)',
-            color: 'var(--text-secondary)',
-            maxWidth: 520,
-            lineHeight: 1.6,
-            marginBottom: 40,
-          }}>
-          Random video chat with real people around the world.
-          One click. Zero friction. Just connect.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center anim-fade-up delay-300">
-          <button className="btn-primary" style={{ fontSize: 16, padding: '16px 36px' }}
-            onClick={() => router.push('/chat?mode=video')}>
-            📹 Start Video Chat
-          </button>
-          <button className="btn-secondary" style={{ fontSize: 16, padding: '16px 36px' }}
-            onClick={() => router.push('/chat?mode=text')}>
-            💬 Start Text Chat
-          </button>
-        </div>
-
-        {/* Trust indicators */}
-        <div className="flex items-center gap-6 mt-12 flex-wrap justify-center anim-fade-up delay-400">
-          {['🔒 End-to-End Encrypted', '👤 100% Anonymous', '⚡ Free Forever'].map(t => (
-            <span key={t} style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>{t}</span>
-          ))}
-        </div>
-      </section>
-
-      {/* Mock Preview */}
-      <section className="hero-content px-5 pb-20 md:pb-28 flex justify-center anim-fade-up delay-500">
-        <div style={{
-          width: '100%', maxWidth: 900,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 28,
-          overflow: 'hidden',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1)',
-          padding: 3,
-        }}>
-          {/* Fake browser bar */}
-          <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            padding: '10px 16px',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            {['#ef4444','#f59e0b','#22c55e'].map(c => (
-              <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
-            ))}
-            <div style={{
-              flex: 1, marginLeft: 12,
-              background: 'rgba(255,255,255,0.06)',
-              borderRadius: 6, height: 24,
-              display: 'flex', alignItems: 'center', paddingLeft: 10,
-              fontSize: 12, color: 'var(--text-muted)',
-            }}>talkrandom.app</div>
-          </div>
-
-          {/* Fake video chat preview */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, background: '#000', padding: 3, borderRadius: '0 0 26px 26px', minHeight: 300 }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(99,102,241,0.1) 100%)',
-              borderRadius: 20, minHeight: 280, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 12, position: 'relative',
-            }}>
-              <div style={{ fontSize: 48 }}>👤</div>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Stranger</span>
-              <div style={{
-                position: 'absolute', bottom: 14, left: 14,
-                padding: '4px 12px', borderRadius: 99,
-                background: 'rgba(0,0,0,0.5)', fontSize: 12,
-                backdropFilter: 'blur(8px)',
-              }}>Stranger 🌍</div>
-            </div>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(236,72,153,0.2) 0%, rgba(139,92,246,0.15) 100%)',
-              borderRadius: 20, minHeight: 280, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 12, position: 'relative',
-            }}>
-              <div style={{ fontSize: 48 }}>😊</div>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>You</span>
-              <div style={{
-                position: 'absolute', bottom: 14, left: 14,
-                padding: '4px 12px', borderRadius: 99,
-                background: 'rgba(0,0,0,0.5)', fontSize: 12,
-                backdropFilter: 'blur(8px)',
-              }}>You</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="hero-content px-5 pb-24 md:px-12">
-        <div className="text-center mb-12">
-          <h2 className="anim-fade-up" style={{
-            fontFamily: 'var(--font-space)', fontSize: 'clamp(28px,5vw,44px)',
-            fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12,
-          }}>
-            Everything you need to <span className="gradient-text-hot">connect</span>
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 16 }}>
-            Built for spontaneous, real human connection.
+        {/* HERO SECTION */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-center max-w-3xl mb-16"
+        >
+          <h1 className="text-5xl md:text-6xl font-extrabold text-[#0f172a] tracking-tight mb-6 leading-[1.1]">
+            Meet New People <br className="hidden md:block"/>
+            <span className="gradient-text">Instantly</span>
+          </h1>
+          <p className="text-lg md:text-xl text-[#475569] mb-10 leading-relaxed max-w-2xl mx-auto">
+            LEAD Connect helps students connect freely beyond department boundaries through live video and chat.
           </p>
-        </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 16, maxWidth: 1000, margin: '0 auto',
-        }}>
-          {features.map((f, i) => (
-            <div key={i} className="feature-card anim-fade-up" style={{ animationDelay: `${0.05 * i}s` }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: f.color, border: `1px solid ${f.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, marginBottom: 16,
-              }}>
-                {f.icon}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full px-4">
+            <button 
+              onClick={() => router.push('/chat')}
+              className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2 py-4 px-8 text-lg shadow-lg hover:shadow-xl"
+            >
+              <Video className="w-5 h-5" /> Start Video Chat
+            </button>
+            <button 
+              onClick={() => router.push('/chat')}
+              className="w-full sm:w-auto btn-secondary flex items-center justify-center gap-2 py-4 px-8 text-lg"
+            >
+              <MessageSquare className="w-5 h-5" /> Start Text Chat
+            </button>
+          </div>
+          
+          <button 
+            onClick={() => setShowSupportModal(true)}
+            className="mt-6 flex items-center justify-center gap-2 mx-auto text-[#64748b] hover:text-[#3b82f6] transition-colors font-medium text-sm"
+          >
+            <Heart className="w-4 h-4" /> Support Developer
+          </button>
+        </motion.div>
+
+        {/* WHAT IS LEAD CONNECT SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full mt-16 mb-24"
+        >
+          <h2 className="text-3xl font-bold text-center text-[#0f172a] mb-12">What is LEAD Connect?</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="glass p-8 rounded-3xl text-center">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Globe className="w-7 h-7" />
               </div>
-              <h3 style={{ fontWeight: 700, marginBottom: 8, fontSize: 16 }}>{f.title}</h3>
-              <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.desc}</p>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Beyond Boundaries</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">A platform created to help students connect, socialize, and make friendships beyond department boundaries.</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="glass p-8 rounded-3xl text-center">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Open Beta</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">Currently in beta testing and temporarily open for everyone to experience and provide feedback.</p>
+            </div>
+            <div className="glass p-8 rounded-3xl text-center">
+              <div className="w-14 h-14 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Navigation className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-[#0f172a] mb-3">Future Roadmap</h3>
+              <p className="text-[#475569] text-sm leading-relaxed">Future updates will include restricted access exclusively for verified LEAD College students.</p>
+            </div>
+          </div>
+        </motion.section>
 
-      {/* Final CTA */}
-      <section className="hero-content px-5 pb-28 text-center">
-        <div style={{
-          maxWidth: 600, margin: '0 auto',
-          padding: '60px 40px',
-          borderRadius: 28,
-          background: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(99,102,241,0.05) 100%)',
-          border: '1px solid rgba(139,92,246,0.2)',
-          boxShadow: '0 0 80px rgba(139,92,246,0.1)',
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🚀</div>
-          <h2 style={{
-            fontFamily: 'var(--font-space)', fontSize: 'clamp(24px,4vw,36px)',
-            fontWeight: 700, marginBottom: 12,
-          }}>
-            Ready to meet someone new?
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: 28, fontSize: 16, lineHeight: 1.6 }}>
-            Join thousands of people already connecting right now.
-            No sign-up. No download. Just click and go.
-          </p>
-          <button className="btn-primary" style={{ fontSize: 17, padding: '18px 44px' }}
-            onClick={() => router.push('/chat')}>
-            Start Chatting Now →
-          </button>
-        </div>
-      </section>
+        {/* ROADMAP SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full mb-24 max-w-3xl mx-auto"
+        >
+          <h2 className="text-3xl font-bold text-center text-[#0f172a] mb-12">Planned Features</h2>
+          <div className="glass p-8 rounded-3xl">
+            <div className="flex flex-col gap-6">
+              {[
+                { title: 'Verified Student Login', desc: 'Secure login strictly for LEAD students' },
+                { title: 'Interest Matching', desc: 'Find peers based on skills and hobbies' },
+                { title: 'Mobile App', desc: 'Native iOS and Android application' },
+                { title: 'Safer Community Tools', desc: 'AI moderation and reporting system' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-[#f1f5f9] border-2 border-[#cbd5e1] flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0f172a] text-lg">{item.title}</h4>
+                    <p className="text-[#64748b] text-sm mt-1">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
 
-      {/* Footer */}
-      <footer className="hero-content px-5 py-8 text-center"
-        style={{ borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 13 }}>
-        <p>© 2025 TalkRandom. Made with ❤️ for spontaneous human connection.</p>
+        {/* ABOUT DEVELOPER SECTION */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="w-full mb-24 max-w-3xl mx-auto"
+        >
+          <div className="glass p-8 rounded-3xl border-2 border-blue-50/50 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none" />
+            
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 border-4 border-white shadow-lg flex-shrink-0">
+               {/* Simulate profile picture */}
+               <div className="w-full h-full bg-gradient-to-br from-[#1e293b] to-[#3b82f6] flex items-center justify-center text-white text-3xl font-bold">VK</div>
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-1">Vishnu K</h2>
+              <p className="text-[#3b82f6] font-semibold text-sm mb-4">Creator & Lead Developer</p>
+              <p className="text-[#475569] text-sm leading-relaxed mb-6">
+                MCA student, backend & realtime systems enthusiast, passionate builder, and DevOps/cloud explorer. Built LEAD Connect to bridge the gap between departments and foster a connected campus culture.
+              </p>
+              <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white rounded-full text-sm font-medium hover:bg-[#1e293b] transition-colors">
+                  <Github className="w-4 h-4" /> GitHub
+                </a>
+                <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-[#cbd5e1] text-[#0f172a] rounded-full text-sm font-medium hover:bg-[#f8fafc] transition-colors">
+                  <Globe className="w-4 h-4" /> Portfolio
+                </a>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+      </div>
+
+      {/* FOOTER */}
+      <footer className="border-t border-[#e2e8f0] bg-white py-12 relative z-10">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-6">
+          <div className="flex items-center gap-4">
+            <a href="https://github.com/vishnucax" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#0f172a] hover:text-white transition-all">
+              <Github className="w-5 h-5" />
+            </a>
+            <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#3b82f6] hover:text-white transition-all">
+              <Globe className="w-5 h-5" />
+            </a>
+            <a href="#" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#ec4899] hover:text-white transition-all">
+              <Instagram className="w-5 h-5" />
+            </a>
+          </div>
+          <div className="text-center">
+            <p className="text-[#64748b] text-sm font-medium">Developed by <a href="https://vishnucax.github.io" target="_blank" rel="noreferrer" className="text-[#3b82f6] hover:underline">Vishnu K</a></p>
+            <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#94a3b8]">
+              <a href="/privacy" className="hover:text-[#0f172a]">Privacy Policy</a>
+              <span>•</span>
+              <span>LEAD Connect Beta © {new Date().getFullYear()}</span>
+            </div>
+          </div>
+        </div>
       </footer>
+
+      {/* SUPPORT MODAL */}
+      <AnimatePresence>
+        {showSupportModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setShowSupportModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
+            >
+              <button 
+                onClick={() => setShowSupportModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"
+              >
+                ✕
+              </button>
+              
+              <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Heart className="w-8 h-8 fill-blue-500" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-[#0f172a] mb-2">Support the Developer</h3>
+              <p className="text-[#475569] text-sm leading-relaxed mb-8">
+                For smooth deployment, server maintenance, and future updates, your support means a lot.
+              </p>
+              
+              <div className="w-48 h-48 mx-auto bg-slate-100 border-2 border-slate-200 rounded-2xl mb-6 flex items-center justify-center overflow-hidden relative">
+                {/* Fallback QR area if image fails */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center">
+                  <p>QR Code</p>
+                  <p>(Place developerqr.jpeg in public/Assets/Images/)</p>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src="/Assets/Images/developerqr.jpeg" 
+                  alt="Support QR Code" 
+                  className="w-full h-full object-cover relative z-10"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+
+              <button 
+                onClick={() => setShowSupportModal(false)}
+                className="w-full py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
