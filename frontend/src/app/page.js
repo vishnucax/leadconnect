@@ -172,6 +172,33 @@ export default function LandingPage() {
           viewport={{ once: true }}
           className="w-full max-w-5xl mx-auto mb-24"
         >
+          {/* AUTO-SCROLLING NEWS / ANNOUNCEMENT BAR */}
+          <div className="mb-10 overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm relative group flex items-center h-14">
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#f8fafc] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#f8fafc] to-transparent z-10 pointer-events-none" />
+            
+            <motion.div 
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ ease: "linear", duration: 25, repeat: Infinity }}
+              className="flex items-center whitespace-nowrap text-sm md:text-base font-semibold text-[#0f172a] group-hover:[animation-play-state:paused]"
+              style={{ width: "fit-content" }}
+            >
+              {/* First Set */}
+              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
+              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
+              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
+              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
+              <span className="mx-6 text-blue-600">•</span> More features coming soon 
+              
+              {/* Duplicated Set for Seamless Infinite Scroll */}
+              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
+              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
+              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
+              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
+              <span className="mx-6 text-blue-600">•</span> More features coming soon
+            </motion.div>
+          </div>
+
           <div className="glass p-8 md:p-12 rounded-[2rem] border border-blue-50/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -z-10 opacity-60 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full blur-[80px] -z-10 opacity-60 pointer-events-none" />
@@ -307,33 +334,6 @@ export default function LandingPage() {
             <p className="text-[#475569] text-base md:text-lg leading-relaxed max-w-3xl mx-auto font-medium">
               Currently open for public beta testing. Future versions will be restricted to verified LEAD College students only.
             </p>
-          </div>
-
-          {/* AUTO-SCROLLING NEWS / ANNOUNCEMENT BAR */}
-          <div className="mt-8 overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm relative group flex items-center h-14">
-            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#f8fafc] to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#f8fafc] to-transparent z-10 pointer-events-none" />
-            
-            <motion.div 
-              animate={{ x: ["0%", "-50%"] }}
-              transition={{ ease: "linear", duration: 25, repeat: Infinity }}
-              className="flex items-center whitespace-nowrap text-sm md:text-base font-semibold text-[#0f172a] group-hover:[animation-play-state:paused]"
-              style={{ width: "fit-content" }}
-            >
-              {/* First Set */}
-              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
-              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
-              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
-              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
-              <span className="mx-6 text-blue-600">•</span> More features coming soon 
-              
-              {/* Duplicated Set for Seamless Infinite Scroll */}
-              <span className="mx-6 text-blue-600">•</span> LEAD Connect Beta v1.0.5 released on April 22, 2026 
-              <span className="mx-6 text-blue-600">•</span> Public beta testing is now live 
-              <span className="mx-6 text-blue-600">•</span> Anyone can connect during testing phase 
-              <span className="mx-6 text-blue-600">•</span> Official release will be exclusive to LEAD College students 
-              <span className="mx-6 text-blue-600">•</span> More features coming soon
-            </motion.div>
           </div>
         </motion.section>
 
