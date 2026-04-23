@@ -555,18 +555,22 @@ export default function ChatPage() {
         <div className="glass p-2 rounded-full flex items-center gap-2 pointer-events-auto shadow-2xl border border-white/20">
           
           {/* LEFT SIDE */}
-          <button className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-blue-500 hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
-            <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
+            <Columns className="w-5 h-5" />
           </button>
 
-          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${showFilters || activeFilter.value !== 'none' ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setShowFilters(!showFilters)}>
-            <Sparkles className="w-5 h-5" />
+          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-yellow-500/20 flex items-center justify-center text-white hover:text-yellow-400 transition-colors" onClick={() => { if (partner) { alert("Reported."); skipChat(); } }} disabled={!partner} style={{ opacity: partner ? 1 : 0.5 }}>
+            <ShieldAlert className="w-5 h-5" />
           </button>
           
           {/* CENTER */}
-          <div className="mx-2 sm:mx-4">
-            <button className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-white transition-all shadow-lg shadow-red-500/40" onClick={endCall}>
-              <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="mx-2 sm:mx-4 flex items-center gap-2 sm:gap-3">
+            <button className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-blue-500 hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
+              <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+            </button>
+            
+            <button className="w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] flex-shrink-0 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-white transition-all shadow-lg shadow-red-500/40" onClick={endCall}>
+              <PhoneOff className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
           </div>
 
@@ -578,8 +582,8 @@ export default function ChatPage() {
             )}
           </button>
 
-          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
-            <Columns className="w-5 h-5" />
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${showFilters || activeFilter.value !== 'none' ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setShowFilters(!showFilters)}>
+            <Sparkles className="w-5 h-5" />
           </button>
 
         </div>
