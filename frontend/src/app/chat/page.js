@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, FlipHorizontal, X, Send, Video } from 'lucide-react';
+import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, FlipHorizontal, X, Send, Video, PhoneOff, Columns } from 'lucide-react';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [mediaError, setMediaError] = useState(null);
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [isSplitScreen, setIsSplitScreen] = useState(false);
   
   const [pipPos, setPipPos] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
@@ -48,6 +49,13 @@ export default function ChatPage() {
 
   // Switch Camera logic
   const [facingMode, setFacingMode] = useState('user');
+
+  const endCall = useCallback(() => {
+    socketRef.current?.disconnect();
+    cleanupPeer();
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    router.push('/');
+  }, [router]);
 
   useEffect(() => {
     document.body.classList.add('chat-body');
@@ -311,12 +319,20 @@ export default function ChatPage() {
   return (
     <div className="fixed inset-0 w-full h-full bg-black overflow-hidden flex flex-col">
       
-      {/* 1. DOMINANT FULLSCREEN VIDEO */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay playsInline
-        className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-500 ${partner ? 'opacity-100' : 'opacity-0'}`}
-      />
+      {/* 1. DOMINANT FULLSCREEN VIDEO OR SPLIT SCREEN */}
+      <motion.div
+        layout
+        className={isSplitScreen 
+          ? "absolute top-0 left-0 right-0 h-1/2 md:h-full md:bottom-0 md:left-0 md:right-1/2 md:w-1/2 z-0 overflow-hidden bg-black border-b md:border-b-0 md:border-r border-white/20"
+          : "absolute inset-0 z-0 overflow-hidden"
+        }
+      >
+        <video
+          ref={remoteVideoRef}
+          autoPlay playsInline
+          className={`w-full h-full object-cover transition-opacity duration-500 ${partner ? 'opacity-100' : 'opacity-0'}`}
+        />
+      </motion.div>
 
       {/* 2. MATCHING / IDLE SCREEN (Shows when no partner) */}
       <AnimatePresence>
@@ -380,13 +396,17 @@ export default function ChatPage() {
         </button>
       </div>
 
-      {/* 4. DRAGGABLE SELF PIP */}
+      {/* 4. DRAGGABLE SELF PIP OR SPLIT SCREEN */}
       <motion.div
         ref={pipRef}
-        className="absolute z-30 w-[100px] h-[140px] sm:w-[130px] sm:h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/50"
-        style={{ ...pipStyle, cursor: isDragging ? 'grabbing' : 'grab' }}
-        onMouseDown={onPipPointerDown}
-        onTouchStart={(e) => onPipPointerDown(e.touches[0])}
+        layout
+        className={isSplitScreen 
+          ? "absolute bottom-0 left-0 right-0 h-1/2 md:top-0 md:bottom-0 md:left-1/2 md:right-0 md:w-1/2 z-0 overflow-hidden bg-black" 
+          : "absolute z-30 w-[100px] h-[140px] sm:w-[130px] sm:h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/50"
+        }
+        style={!isSplitScreen ? { ...pipStyle, cursor: isDragging ? 'grabbing' : 'grab' } : {}}
+        onMouseDown={!isSplitScreen ? onPipPointerDown : undefined}
+        onTouchStart={!isSplitScreen ? (e) => onPipPointerDown(e.touches[0]) : undefined}
       >
         <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} />
         {!isCameraOn && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900"><CameraOff className="text-white/50 w-8 h-8"/></div>}
@@ -449,34 +469,42 @@ export default function ChatPage() {
 
       {/* 6. BOTTOM FLOATING DOCK */}
       <div className="absolute bottom-0 left-0 right-0 z-30 pb-[calc(20px+env(safe-area-inset-bottom))] pt-10 px-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center pointer-events-none">
-        <div className="glass p-2 rounded-full flex items-center gap-2 pointer-events-auto shadow-2xl border border-white/20">
+        <div className="glass p-2 rounded-full flex items-center gap-1.5 sm:gap-2 pointer-events-auto shadow-2xl border border-white/20 overflow-x-auto no-scrollbar max-w-[95vw]">
           
-          <button className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleMic}>
+          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleMic}>
             {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-red-400" />}
           </button>
           
-          <button className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleCamera}>
+          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleCamera}>
             {isCameraOn ? <Camera className="w-5 h-5" /> : <CameraOff className="w-5 h-5 text-red-400" />}
           </button>
           
-          <button className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={switchCamera}>
+          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={switchCamera}>
             <FlipHorizontal className="w-5 h-5" />
           </button>
           
-          <button className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors relative ${chatOpen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setChatOpen(!chatOpen)}>
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
+            <Columns className="w-5 h-5" />
+          </button>
+
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${chatOpen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setChatOpen(!chatOpen)}>
             <MessageSquare className="w-5 h-5" />
             {!chatOpen && messages.filter(m => !m.isSystem && m.sender !== 'me').length > 0 && (
-              <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-transparent" />
+              <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-transparent" />
             )}
           </button>
 
+          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-red-500/20 hover:bg-red-500 flex items-center justify-center text-red-500 hover:text-white transition-all shadow-lg shadow-red-500/20" onClick={endCall}>
+            <PhoneOff className="w-5 h-5" />
+          </button>
+
           {partner && (
-            <button className="w-12 h-12 rounded-full bg-white/10 hover:bg-red-500/20 flex items-center justify-center text-white hover:text-red-400 transition-colors" onClick={() => { alert("Reported."); skipChat(); }}>
+            <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-red-500/20 flex items-center justify-center text-white hover:text-red-400 transition-colors" onClick={() => { alert("Reported."); skipChat(); }}>
               <ShieldAlert className="w-5 h-5" />
             </button>
           )}
 
-          <button className="ml-2 w-14 h-14 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
+          <button className="ml-1 sm:ml-2 w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
             {partner || isMatching ? <SkipForward className="w-6 h-6 fill-current" /> : <Video className="w-6 h-6 fill-current" />}
           </button>
 
