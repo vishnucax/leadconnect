@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, X, Send, Video, PhoneOff, Columns, Sparkles } from 'lucide-react';
+import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, X, Send, Video, PhoneOff, Columns, Sparkles, Eye, Wifi } from 'lucide-react';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -379,7 +379,7 @@ export default function ChatPage() {
       <motion.div
         layout
         className={isSplitScreen 
-          ? "absolute top-0 left-0 right-0 h-1/2 md:h-full md:bottom-0 md:left-0 md:right-1/2 md:w-1/2 z-0 overflow-hidden bg-black border-b md:border-b-0 md:border-r border-white/10 shadow-[0_0_40px_rgba(255,255,255,0.1)] z-10"
+          ? "absolute top-0 left-0 w-full h-1/2 md:w-1/2 md:h-full z-0 overflow-hidden bg-black border-b md:border-b-0 md:border-r border-white/20 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
           : "absolute inset-0 z-0 overflow-hidden"
         }
       >
@@ -404,7 +404,7 @@ export default function ChatPage() {
                 <div className="tt-radar">
                   <div className="tt-radar-ring" />
                   <div className="tt-radar-ring delay-1" />
-                  <div className="tt-radar-center">📡</div>
+                  <div className="tt-radar-center"><Wifi className="w-5 h-5 text-white/80" /></div>
                 </div>
                 <h2 className="text-2xl font-bold tracking-tight text-white/90">Finding someone...</h2>
                 <p className="text-white/50 text-sm">{onlineCount} online globally</p>
@@ -443,8 +443,8 @@ export default function ChatPage() {
               <span className="text-xs font-bold text-white/90 tracking-wide">LIVE</span>
             </div>
           )}
-          <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/70">
-            👁 {onlineCount}
+          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/70">
+            <Eye className="w-3.5 h-3.5" /> {onlineCount}
           </div>
         </div>
         <button onClick={() => { socketRef.current?.disconnect(); router.push('/'); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white/80 hover:bg-white/20 transition-colors">
@@ -457,7 +457,7 @@ export default function ChatPage() {
         ref={pipRef}
         layout
         className={isSplitScreen 
-          ? "absolute bottom-0 left-0 right-0 h-1/2 md:top-0 md:bottom-0 md:left-1/2 md:right-0 md:w-1/2 z-0 overflow-hidden bg-black" 
+          ? "absolute bottom-0 left-0 w-full h-1/2 md:top-0 md:left-1/2 md:w-1/2 md:h-full z-0 overflow-hidden bg-black" 
           : "absolute z-30 w-[100px] h-[140px] sm:w-[130px] sm:h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/50"
         }
         style={!isSplitScreen ? { ...pipStyle, cursor: isDragging ? 'grabbing' : 'grab' } : {}}
@@ -552,43 +552,34 @@ export default function ChatPage() {
       </AnimatePresence>
 
       <div className="absolute bottom-0 left-0 right-0 z-30 pb-[calc(20px+env(safe-area-inset-bottom))] pt-10 px-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center pointer-events-none">
-        <div className="glass p-2 rounded-full flex items-center gap-1.5 sm:gap-2 pointer-events-auto shadow-2xl border border-white/20 overflow-x-auto no-scrollbar max-w-[95vw]">
+        <div className="glass p-2 rounded-full flex items-center gap-2 pointer-events-auto shadow-2xl border border-white/20">
           
-          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleMic}>
-            {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-red-400" />}
-          </button>
-          
-          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleCamera}>
-            {isCameraOn ? <Camera className="w-5 h-5" /> : <CameraOff className="w-5 h-5 text-red-400" />}
+          {/* LEFT SIDE */}
+          <button className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-blue-500 hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
+            <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
           </button>
 
-          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${showFilters || activeFilter.value !== 'none' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setShowFilters(!showFilters)}>
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${showFilters || activeFilter.value !== 'none' ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setShowFilters(!showFilters)}>
             <Sparkles className="w-5 h-5" />
           </button>
           
-          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
-            <Columns className="w-5 h-5" />
-          </button>
+          {/* CENTER */}
+          <div className="mx-2 sm:mx-4">
+            <button className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-white transition-all shadow-lg shadow-red-500/40" onClick={endCall}>
+              <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+          </div>
 
-          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${chatOpen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setChatOpen(!chatOpen)}>
+          {/* RIGHT SIDE */}
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${chatOpen ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setChatOpen(!chatOpen)}>
             <MessageSquare className="w-5 h-5" />
             {!chatOpen && messages.filter(m => !m.isSystem && m.sender !== 'me').length > 0 && (
               <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-transparent" />
             )}
           </button>
 
-          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-red-500/20 hover:bg-red-500 flex items-center justify-center text-red-500 hover:text-white transition-all shadow-lg shadow-red-500/20" onClick={endCall}>
-            <PhoneOff className="w-5 h-5" />
-          </button>
-
-          {partner && (
-            <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-red-500/20 flex items-center justify-center text-white hover:text-red-400 transition-colors" onClick={() => { alert("Reported."); skipChat(); }}>
-              <ShieldAlert className="w-5 h-5" />
-            </button>
-          )}
-
-          <button className="ml-1 sm:ml-2 w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
-            <SkipForward className="w-6 h-6 fill-current" />
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
+            <Columns className="w-5 h-5" />
           </button>
 
         </div>
