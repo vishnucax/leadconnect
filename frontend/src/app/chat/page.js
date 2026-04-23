@@ -14,9 +14,7 @@ const FILTERS = [
   { name: 'Warm', value: 'sepia(0.3) saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
   { name: 'Cool', value: 'saturate(1.2) contrast(1.1) hue-rotate(10deg)' },
   { name: 'B&W', value: 'grayscale(1) contrast(1.2)' },
-  { name: 'Cinematic', value: 'contrast(1.2) saturate(1.1) brightness(0.9)' },
-  { name: 'Blur', value: 'blur(2px)' },
-  { name: 'Bright', value: 'brightness(1.15) contrast(1.05)' }
+  { name: 'Cinematic', value: 'contrast(1.2) saturate(1.1) brightness(0.9)' }
 ];
 
 function getGuestId() {
@@ -527,25 +525,39 @@ export default function ChatPage() {
       <AnimatePresence>
         {showFilters && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-[90px] sm:bottom-[100px] left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-[350px] z-40 bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl p-4 flex flex-col gap-3"
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
+            className="absolute bottom-[100px] sm:bottom-[110px] left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-[420px] z-40 bg-gradient-to-b from-white/10 to-black/60 backdrop-blur-3xl rounded-[28px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] p-3 flex flex-col gap-2"
           >
-            <div className="flex justify-between items-center px-1">
-              <span className="text-white font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-blue-400" /> Video Filters</span>
-              <button onClick={() => setShowFilters(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+            <div className="flex justify-between items-center px-2 pb-1">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                </div>
+                <span className="text-white/90 font-medium text-sm tracking-wide">Video Filters</span>
+              </div>
+              <button onClick={() => setShowFilters(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-              {FILTERS.map(f => (
-                <button
-                  key={f.name}
-                  onClick={() => setActiveFilter(f)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all ${activeFilter.name === f.name ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
-                >
-                  {f.name}
-                </button>
-              ))}
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-2 px-2 snap-x">
+              {FILTERS.map(f => {
+                const isActive = activeFilter.name === f.name;
+                return (
+                  <motion.button
+                    key={f.name}
+                    onClick={() => setActiveFilter(f)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`flex-shrink-0 relative group snap-center flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${isActive ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-blue-400/50' : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20 backdrop-blur-md'}`}
+                  >
+                    {isActive && <Sparkles className="w-3.5 h-3.5" />}
+                    {f.name}
+                  </motion.button>
+                );
+              })}
             </div>
           </motion.div>
         )}
