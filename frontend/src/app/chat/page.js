@@ -4,9 +4,20 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, FlipHorizontal, X, Send, Video, PhoneOff, Columns } from 'lucide-react';
+import { Camera, CameraOff, Mic, MicOff, MessageSquare, ShieldAlert, SkipForward, X, Send, Video, PhoneOff, Columns, Sparkles } from 'lucide-react';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+const FILTERS = [
+  { name: 'Normal', value: 'none' },
+  { name: 'Beauty', value: 'contrast(1.05) brightness(1.05) blur(0.5px)' },
+  { name: 'Warm', value: 'sepia(0.3) saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
+  { name: 'Cool', value: 'saturate(1.2) contrast(1.1) hue-rotate(10deg)' },
+  { name: 'B&W', value: 'grayscale(1) contrast(1.2)' },
+  { name: 'Cinematic', value: 'contrast(1.2) saturate(1.1) brightness(0.9)' },
+  { name: 'Blur', value: 'blur(2px)' },
+  { name: 'Bright', value: 'brightness(1.15) contrast(1.05)' }
+];
 
 function getGuestId() {
   if (typeof window === 'undefined') return null;
@@ -32,10 +43,18 @@ export default function ChatPage() {
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [isSplitScreen, setIsSplitScreen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+  const [showFilters, setShowFilters] = useState(false);
   
   const [pipPos, setPipPos] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+
+  const rawStreamRef = useRef(null);
+  const rawVideoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const activeFilterRef = useRef(FILTERS[0]);
+  const animationRef = useRef(null);
 
   const localStreamRef = useRef(null);
   const peerRef = useRef(null);
@@ -47,15 +66,9 @@ export default function ChatPage() {
   const partnerRef = useRef(null);
   const pipRef = useRef(null);
 
-  // Switch Camera logic
-  const [facingMode, setFacingMode] = useState('user');
-
-  const endCall = useCallback(() => {
-    socketRef.current?.disconnect();
-    cleanupPeer();
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
-    router.push('/');
-  }, [router]);
+  useEffect(() => {
+    activeFilterRef.current = activeFilter;
+  }, [activeFilter]);
 
   useEffect(() => {
     document.body.classList.add('chat-body');
@@ -63,22 +76,60 @@ export default function ChatPage() {
     return () => document.body.classList.remove('chat-body');
   }, []);
 
-  const initMedia = useCallback(async (mode = 'user') => {
+  const initMedia = useCallback(async () => {
     try {
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach(t => t.stop());
+      }
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(t => t.stop());
       }
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: mode }, 
+        video: { facingMode: 'user' }, 
         audio: true 
       });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      rawStreamRef.current = stream;
+
+      if (!rawVideoRef.current) {
+        rawVideoRef.current = document.createElement('video');
+        rawVideoRef.current.muted = true;
+        rawVideoRef.current.playsInline = true;
+      }
+      rawVideoRef.current.srcObject = stream;
+      await rawVideoRef.current.play().catch(() => {});
+
+      if (!canvasRef.current) {
+        canvasRef.current = document.createElement('canvas');
+      }
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', { willReadFrequently: false, alpha: false });
+
+      const drawFrame = () => {
+        if (rawVideoRef.current && rawVideoRef.current.videoWidth > 0) {
+          if (canvas.width !== rawVideoRef.current.videoWidth) {
+            canvas.width = rawVideoRef.current.videoWidth;
+            canvas.height = rawVideoRef.current.videoHeight;
+          }
+          ctx.filter = activeFilterRef.current.value;
+          ctx.drawImage(rawVideoRef.current, 0, 0, canvas.width, canvas.height);
+        }
+        animationRef.current = requestAnimationFrame(drawFrame);
+      };
+
+      cancelAnimationFrame(animationRef.current);
+      drawFrame();
+
+      const canvasStream = canvas.captureStream(30);
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) canvasStream.addTrack(audioTrack);
+
+      localStreamRef.current = canvasStream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = canvasStream;
       
       // Update WebRTC senders if already connected
       if (peerRef.current) {
-        const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
+        const videoTrack = canvasStream.getVideoTracks()[0];
+        const audioTrack = canvasStream.getAudioTracks()[0];
         const senders = peerRef.current.getSenders();
         
         const videoSender = senders.find(s => s.track?.kind === 'video');
@@ -92,19 +143,13 @@ export default function ChatPage() {
       setMediaError(null);
       setIsCameraOn(true);
       setIsMicOn(true);
-      return stream;
+      return canvasStream;
     } catch (err) {
       setMediaError('Camera/mic access denied.');
       setIsMediaReady(true);
       return null;
     }
   }, []);
-
-  const switchCamera = () => {
-    const newMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newMode);
-    initMedia(newMode);
-  };
 
   const cleanupPeer = useCallback(() => {
     if (peerRef.current) {
@@ -125,6 +170,15 @@ export default function ChatPage() {
     setPartner(null);
     setIsMatching(false);
   }, [cleanupPeer]);
+
+  const endCall = useCallback(() => {
+    socketRef.current?.disconnect();
+    cleanupPeer();
+    rawStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(animationRef.current);
+    router.push('/');
+  }, [cleanupPeer, router]);
 
   const startWebRTC = useCallback(async (initiator, relay = false) => {
     const sock = socketRef.current;
@@ -236,7 +290,9 @@ export default function ChatPage() {
     return () => {
       sock.disconnect();
       cleanupPeer();
+      rawStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current?.getTracks().forEach(t => t.stop());
+      cancelAnimationFrame(animationRef.current);
     };
   }, []); // eslint-disable-line
 
@@ -266,14 +322,14 @@ export default function ChatPage() {
   }, [inputText]);
 
   const toggleCamera = () => {
-    const t = localStreamRef.current?.getVideoTracks()[0];
+    const t = rawStreamRef.current?.getVideoTracks()[0];
     if (!t) return;
     t.enabled = !t.enabled;
     setIsCameraOn(t.enabled);
   };
 
   const toggleMic = () => {
-    const t = localStreamRef.current?.getAudioTracks()[0];
+    const t = rawStreamRef.current?.getAudioTracks()[0];
     if (!t) return;
     t.enabled = !t.enabled;
     setIsMicOn(t.enabled);
@@ -323,7 +379,7 @@ export default function ChatPage() {
       <motion.div
         layout
         className={isSplitScreen 
-          ? "absolute top-0 left-0 right-0 h-1/2 md:h-full md:bottom-0 md:left-0 md:right-1/2 md:w-1/2 z-0 overflow-hidden bg-black border-b md:border-b-0 md:border-r border-white/20"
+          ? "absolute top-0 left-0 right-0 h-1/2 md:h-full md:bottom-0 md:left-0 md:right-1/2 md:w-1/2 z-0 overflow-hidden bg-black border-b md:border-b-0 md:border-r border-white/10 shadow-[0_0_40px_rgba(255,255,255,0.1)] z-10"
           : "absolute inset-0 z-0 overflow-hidden"
         }
       >
@@ -408,7 +464,7 @@ export default function ChatPage() {
         onMouseDown={!isSplitScreen ? onPipPointerDown : undefined}
         onTouchStart={!isSplitScreen ? (e) => onPipPointerDown(e.touches[0]) : undefined}
       >
-        <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} />
+        <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
         {!isCameraOn && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900"><CameraOff className="text-white/50 w-8 h-8"/></div>}
       </motion.div>
 
@@ -467,7 +523,34 @@ export default function ChatPage() {
         )}
       </AnimatePresence>
 
-      {/* 6. BOTTOM FLOATING DOCK */}
+      {/* 6. FILTER PANEL AND DOCK */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-[90px] sm:bottom-[100px] left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-[350px] z-40 bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl p-4 flex flex-col gap-3"
+          >
+            <div className="flex justify-between items-center px-1">
+              <span className="text-white font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-blue-400" /> Video Filters</span>
+              <button onClick={() => setShowFilters(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+              {FILTERS.map(f => (
+                <button
+                  key={f.name}
+                  onClick={() => setActiveFilter(f)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all ${activeFilter.name === f.name ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
+                >
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="absolute bottom-0 left-0 right-0 z-30 pb-[calc(20px+env(safe-area-inset-bottom))] pt-10 px-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center pointer-events-none">
         <div className="glass p-2 rounded-full flex items-center gap-1.5 sm:gap-2 pointer-events-auto shadow-2xl border border-white/20 overflow-x-auto no-scrollbar max-w-[95vw]">
           
@@ -478,9 +561,9 @@ export default function ChatPage() {
           <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={toggleCamera}>
             {isCameraOn ? <Camera className="w-5 h-5" /> : <CameraOff className="w-5 h-5 text-red-400" />}
           </button>
-          
-          <button className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors" onClick={switchCamera}>
-            <FlipHorizontal className="w-5 h-5" />
+
+          <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${showFilters || activeFilter.value !== 'none' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setShowFilters(!showFilters)}>
+            <Sparkles className="w-5 h-5" />
           </button>
           
           <button className={`w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors relative ${isSplitScreen ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`} onClick={() => setIsSplitScreen(!isSplitScreen)}>
@@ -505,7 +588,7 @@ export default function ChatPage() {
           )}
 
           <button className="ml-1 sm:ml-2 w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] hover:brightness-110 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all" onClick={partner || isMatching ? skipChat : startChat} disabled={!isMediaReady}>
-            {partner || isMatching ? <SkipForward className="w-6 h-6 fill-current" /> : <Video className="w-6 h-6 fill-current" />}
+            <SkipForward className="w-6 h-6 fill-current" />
           </button>
 
         </div>
